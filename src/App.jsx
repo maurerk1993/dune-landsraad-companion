@@ -39,6 +39,17 @@ const STORAGE_KEY = "dune_landsraad_companion_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
+const NEW_YORK_TIME_ZONE = "America/New_York";
+
+const WEEKDAY_INDEX = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6,
+};
 
 function safeParse(json, fallback) {
   try {
@@ -53,6 +64,93 @@ function houseAnchorSlug(houseName) {
     ? houseName.slice(6)
     : houseName;
   return base.toLowerCase().split(" ").filter(Boolean).join("-");
+}
+
+function getTimeZoneOffsetMs(date, timeZone) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+
+  const map = Object.fromEntries(
+    parts
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, Number(part.value)])
+  );
+
+  const asUtc = Date.UTC(map.year, map.month - 1, map.day, map.hour, map.minute, map.second);
+  return asUtc - date.getTime();
+}
+
+function zonedDateTimeToUtcDate({ year, month, day, hour = 0, minute = 0, second = 0 }, timeZone) {
+  const utc = Date.UTC(year, month - 1, day, hour, minute, second);
+
+  let timestamp = utc;
+  for (let i = 0; i < 2; i += 1) {
+    const offset = getTimeZoneOffsetMs(new Date(timestamp), timeZone);
+    timestamp = utc - offset;
+  }
+
+  return new Date(timestamp);
+}
+
+function getTimeUntilNextTuesdayMidnightEt(now = new Date()) {
+  const nyDateParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: NEW_YORK_TIME_ZONE,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    hour12: false,
+    weekday: "short",
+  }).formatToParts(now);
+
+  const map = Object.fromEntries(
+    nyDateParts
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, part.value])
+  );
+
+  const year = Number(map.year);
+  const month = Number(map.month);
+  const day = Number(map.day);
+  const weekday = WEEKDAY_INDEX[map.weekday] ?? 0;
+
+  let daysUntilTuesday = (2 - weekday + 7) % 7;
+  if (daysUntilTuesday === 0) {
+    daysUntilTuesday = 7;
+  }
+
+  const targetEtMidnight = zonedDateTimeToUtcDate(
+    {
+      year,
+      month,
+      day: day + daysUntilTuesday,
+      hour: 0,
+      minute: 0,
+      second: 0,
+    },
+    NEW_YORK_TIME_ZONE
+  );
+
+  return Math.max(0, targetEtMidnight.getTime() - now.getTime());
+}
+
+function formatCountdown(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${days}d ${hours}h ${minutes}m ${seconds}s`;
 }
 
 const ALL_LANDSRAAD_HOUSES = [
@@ -1266,6 +1364,9 @@ export default function App() {
   const [generalTodos, setGeneralTodos] = useState(defaults.generalTodos);
   const [landsraadHouses, setLandsraadHouses] = useState(defaults.landsraadHouses);
   const [houseSwatches, setHouseSwatches] = useState(defaults.houseSwatches);
+  const [weeklyResetCountdown, setWeeklyResetCountdown] = useState(() =>
+    getTimeUntilNextTuesdayMidnightEt()
+  );
 
   // Auth bootstrap
   useEffect(() => {
@@ -1387,6 +1488,14 @@ export default function App() {
     landsraadHouses,
     houseSwatches,
   ]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setWeeklyResetCountdown(getTimeUntilNextTuesdayMidnightEt());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // cloud autosave (debounced)
   useEffect(() => {
@@ -1606,6 +1715,21 @@ export default function App() {
                   : cloudSaving
                     ? "Saving to cloud..."
                     : "Cloud sync active"}
+              </div>
+
+              <div
+                className={`rounded-xl border px-3 py-2 text-xs min-w-[220px] ${
+                  isDark
+                    ? "border-[#4a3a25] bg-[#1b1510] text-[#e6d0ac]"
+                    : "border-[#c9a878] bg-[#f7ead2] text-[#6d4f27]"
+                }`}
+              >
+                <div className="flex items-center gap-2 font-semibold">
+                  <Clock3 className="h-3.5 w-3.5" /> Weekly Reset (Tue 12:00 AM EST)
+                </div>
+                <div className={`${isDark ? "text-[#c8bca7]" : "text-[#7a6342]"}`}>
+                  {formatCountdown(weeklyResetCountdown)}
+                </div>
               </div>
             </div>
           </div>
