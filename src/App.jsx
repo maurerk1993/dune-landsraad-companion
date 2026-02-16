@@ -343,7 +343,7 @@ function TodoListCard({
 
   return (
     <Card
-      className={`rounded-2xl shadow-sm border ${
+      className={`rounded-2xl border shadow-lg shadow-black/10 backdrop-blur-[1px] ${
         isDark
           ? "bg-[#16120e] border-[#3e3122]"
           : "bg-[#fff9ef] border-[#d8bc91]"
@@ -471,7 +471,7 @@ function MaterialsCard({ materials, setMaterials, isDark }) {
 
   return (
     <Card
-      className={`rounded-2xl shadow-sm border ${
+      className={`rounded-2xl border shadow-lg shadow-black/10 backdrop-blur-[1px] ${
         isDark
           ? "bg-[#16120e] border-[#3e3122]"
           : "bg-[#fff9ef] border-[#d8bc91]"
@@ -602,7 +602,7 @@ function ItemsCard({ items, setItems, isDark }) {
 
   return (
     <Card
-      className={`rounded-2xl shadow-sm border ${
+      className={`rounded-2xl border shadow-lg shadow-black/10 backdrop-blur-[1px] ${
         isDark
           ? "bg-[#16120e] border-[#3e3122]"
           : "bg-[#fff9ef] border-[#d8bc91]"
@@ -738,7 +738,7 @@ function LandsraadCard({ houses, setHouses, isDark }) {
       houses.map((h) => ({
         ...h,
         current: 0,
-        goals: h.goals.map((g) => ({ ...g, done: false })),
+        goals: [],
       }))
     );
   };
@@ -794,7 +794,7 @@ function LandsraadCard({ houses, setHouses, isDark }) {
   return (
     <div className="space-y-4">
       <Card
-        className={`rounded-2xl shadow-sm border ${
+        className={`rounded-2xl border shadow-lg shadow-black/10 backdrop-blur-[1px] ${
           isDark ? "bg-[#16120e] border-[#3e3122]" : "bg-[#fff9ef] border-[#d8bc91]"
         }`}
       >
@@ -830,7 +830,7 @@ function LandsraadCard({ houses, setHouses, isDark }) {
                   : "gap-2 border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
               }
             >
-              <RotateCcw className="h-4 w-4" /> Reset for Week
+              <RotateCcw className="h-4 w-4" /> Reset Week (Clear Goals)
             </Button>
           </div>
 
@@ -1113,7 +1113,7 @@ function HouseSwatchesCard({ swatches, setSwatches, isDark }) {
 
   return (
     <Card
-      className={`rounded-2xl shadow-sm border ${
+      className={`rounded-2xl border shadow-lg shadow-black/10 backdrop-blur-[1px] ${
         isDark
           ? "bg-[#16120e] border-[#3e3122]"
           : "bg-[#fff9ef] border-[#d8bc91]"
@@ -1619,8 +1619,8 @@ export default function App() {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`rounded-3xl border p-6 md:p-8 shadow-sm backdrop-blur-sm ${
-            isDark ? "bg-[#18130e]/80 border-[#4a3a25]" : "bg-[#fff4df]/80 border-[#c9a878]"
+          className={`rounded-3xl border p-6 md:p-8 shadow-xl backdrop-blur-md ${
+            isDark ? "bg-[#18130e]/85 border-[#5a452a] shadow-[#00000066]" : "bg-[#fff4df]/90 border-[#c9a878] shadow-[#9b7a4555]"
           }`}
         >
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -1737,8 +1737,8 @@ export default function App() {
 
         <Tabs defaultValue="coop" className="space-y-4">
           <TabsList
-            className={`grid grid-cols-2 md:grid-cols-6 gap-2 h-auto rounded-2xl p-1 border ${
-              isDark ? "bg-[#18130e]/80 border-[#4a3a25]" : "bg-[#fff3dc] border-[#c9a878]"
+            className={`grid grid-cols-2 md:grid-cols-6 gap-2 h-auto rounded-2xl p-1.5 border shadow-lg backdrop-blur-sm ${
+              isDark ? "bg-[#18130e]/85 border-[#5a452a] shadow-[#00000066]" : "bg-[#fff3dc]/95 border-[#c9a878] shadow-[#9b7a4555]"
             }`}
           >
             <TabsTrigger value="coop" className="rounded-xl gap-2">
