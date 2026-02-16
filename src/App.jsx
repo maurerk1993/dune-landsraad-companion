@@ -905,7 +905,7 @@ function LandsraadCard({ houses, setHouses, isDark }) {
             </div>
           </div>
 
-          <ScrollArea className="h-[360px] pr-2">
+          <ScrollArea className="h-[calc(100vh-17rem)] min-h-[620px] pr-2">
             <div className="space-y-3">
               {sortedHouses.map((h) => {
                 const doneCount = h.goals.filter((g) => g.done).length;
