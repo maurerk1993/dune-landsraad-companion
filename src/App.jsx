@@ -36,7 +36,7 @@ function uid() {
 
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "1.7.0";
+const APP_VERSION = "1.9.0";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -236,6 +236,35 @@ function makeDefaultHouses() {
   }));
 }
 
+function makeDefaultHouseSwatches() {
+  return ALL_LANDSRAAD_HOUSES.map((houseName) => ({
+    id: uid(),
+    text: `${houseName} Placeable Swatch`,
+    done: false,
+  }));
+}
+
+function normalizeHouseSwatches(swatches = []) {
+  const seeded = makeDefaultHouseSwatches();
+  const existingByText = new Map(
+    swatches.map((swatch) => [String(swatch.text || "").trim().toLowerCase(), swatch])
+  );
+
+  const mergedSeeded = seeded.map((seed) => {
+    const existing = existingByText.get(seed.text.toLowerCase());
+    return existing
+      ? { ...seed, id: existing.id || seed.id, done: Boolean(existing.done) }
+      : seed;
+  });
+
+  const extras = swatches.filter((swatch) => {
+    const key = String(swatch.text || "").trim().toLowerCase();
+    return key && !mergedSeeded.some((seed) => seed.text.toLowerCase() === key);
+  });
+
+  return [...mergedSeeded, ...extras];
+}
+
 function makeDefaultState() {
   return {
     isDark: true,
@@ -260,7 +289,7 @@ function makeDefaultState() {
       { id: uid(), text: "Move old loot to storage", done: false },
     ],
     landsraadHouses: makeDefaultHouses(),
-    houseSwatches: [{ id: uid(), text: "Atreides Sand Pattern", done: true }],
+    houseSwatches: makeDefaultHouseSwatches(),
     trackedOnlyMode: false,
   };
 }
@@ -1449,7 +1478,7 @@ function AuthGate({ onSignedIn, isDark }) {
       className={`min-h-screen w-full flex items-center justify-center p-4 ${
         isDark
           ? "bg-[radial-gradient(1100px_520px_at_12%_8%,_#3e2748_0%,_transparent_58%),radial-gradient(900px_440px_at_88%_18%,_#4a1e28_0%,_transparent_62%),radial-gradient(700px_360px_at_50%_115%,_#2a2f5e_0%,_transparent_68%),linear-gradient(170deg,_#1b1319_0%,_#110d12_48%,_#0b090d_100%)] text-[#f2e7d5]"
-          : "bg-[radial-gradient(1200px_500px_at_15%_8%,_#fff0cd_0%,_#f6e3c0_35%,_transparent_70%),radial-gradient(900px_420px_at_85%_22%,_#efd5a6_0%,_#e4c38d_40%,_transparent_72%),linear-gradient(165deg,_#f8e8c9_0%,_#edd7b2_44%,_#dcc08f_100%)] text-[#3a2b17]"
+          : "bg-[radial-gradient(900px_440px_at_20%_6%,_#cfb5ef_0%,_transparent_62%),radial-gradient(1200px_500px_at_15%_8%,_#fff0cd_0%,_#f6e3c0_35%,_transparent_70%),radial-gradient(900px_420px_at_85%_22%,_#efd5a6_0%,_#e4c38d_40%,_transparent_72%),linear-gradient(165deg,_#f8e8c9_0%,_#edd7b2_44%,_#dcc08f_100%)] text-[#3a2b17]"
       }`}
     >
       <Card
@@ -1615,7 +1644,7 @@ export default function App() {
       if (Array.isArray(saved.farmItems)) setFarmItems(saved.farmItems);
       if (Array.isArray(saved.generalTodos)) setGeneralTodos(saved.generalTodos);
       if (Array.isArray(saved.landsraadHouses)) setLandsraadHouses(saved.landsraadHouses);
-      if (Array.isArray(saved.houseSwatches)) setHouseSwatches(saved.houseSwatches);
+      if (Array.isArray(saved.houseSwatches)) setHouseSwatches(normalizeHouseSwatches(saved.houseSwatches));
       if (typeof saved.trackedOnlyMode === "boolean") setTrackedOnlyMode(saved.trackedOnlyMode);
     }
 
@@ -1648,7 +1677,7 @@ export default function App() {
           if (Array.isArray(s.farmItems)) setFarmItems(s.farmItems);
           if (Array.isArray(s.generalTodos)) setGeneralTodos(s.generalTodos);
           if (Array.isArray(s.landsraadHouses)) setLandsraadHouses(s.landsraadHouses);
-          if (Array.isArray(s.houseSwatches)) setHouseSwatches(s.houseSwatches);
+          if (Array.isArray(s.houseSwatches)) setHouseSwatches(normalizeHouseSwatches(s.houseSwatches));
           if (typeof s.trackedOnlyMode === "boolean") setTrackedOnlyMode(s.trackedOnlyMode);
         } else {
           // Seed first cloud row with current local state
@@ -1717,6 +1746,11 @@ export default function App() {
 
     return () => clearInterval(interval);
   }, []);
+  useEffect(() => {
+    if (!hydrated) return;
+    setHouseSwatches((prev) => normalizeHouseSwatches(prev));
+  }, [hydrated]);
+
 
   // cloud autosave (debounced)
   useEffect(() => {
@@ -1808,7 +1842,7 @@ export default function App() {
       if (Array.isArray(d.farmItems)) setFarmItems(d.farmItems);
       if (Array.isArray(d.generalTodos)) setGeneralTodos(d.generalTodos);
       if (Array.isArray(d.landsraadHouses)) setLandsraadHouses(d.landsraadHouses);
-      if (Array.isArray(d.houseSwatches)) setHouseSwatches(d.houseSwatches);
+      if (Array.isArray(d.houseSwatches)) setHouseSwatches(normalizeHouseSwatches(d.houseSwatches));
       if (typeof d.trackedOnlyMode === "boolean") setTrackedOnlyMode(d.trackedOnlyMode);
 
       window.alert("Backup imported successfully.");
@@ -1840,7 +1874,7 @@ export default function App() {
       className={`min-h-screen w-full transition-colors ${
         isDark
           ? "bg-[radial-gradient(1100px_520px_at_12%_8%,_#3e2748_0%,_transparent_58%),radial-gradient(900px_440px_at_88%_18%,_#4a1e28_0%,_transparent_62%),radial-gradient(700px_360px_at_50%_115%,_#2a2f5e_0%,_transparent_68%),linear-gradient(170deg,_#1b1319_0%,_#110d12_48%,_#0b090d_100%)] text-[#f2e7d5]"
-          : "bg-[radial-gradient(1200px_500px_at_15%_8%,_#fff0cd_0%,_#f6e3c0_35%,_transparent_70%),radial-gradient(900px_420px_at_85%_22%,_#efd5a6_0%,_#e4c38d_40%,_transparent_72%),linear-gradient(165deg,_#f8e8c9_0%,_#edd7b2_44%,_#dcc08f_100%)] text-[#3a2b17]"
+          : "bg-[radial-gradient(900px_440px_at_20%_6%,_#cfb5ef_0%,_transparent_62%),radial-gradient(1200px_500px_at_15%_8%,_#fff0cd_0%,_#f6e3c0_35%,_transparent_70%),radial-gradient(900px_420px_at_85%_22%,_#efd5a6_0%,_#e4c38d_40%,_transparent_72%),linear-gradient(165deg,_#f8e8c9_0%,_#edd7b2_44%,_#dcc08f_100%)] text-[#3a2b17]"
       }`}
     >
       <div className="mx-auto max-w-7xl p-4 md:p-8 space-y-6">
