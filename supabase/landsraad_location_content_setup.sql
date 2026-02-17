@@ -3,6 +3,8 @@
 create table if not exists public.landsraad_location_content (
   key text primary key,
   entries jsonb not null default '{}'::jsonb,
+  farm_sources jsonb not null default '[]'::jsonb,
+  dune_tools jsonb not null default '[]'::jsonb,
   updated_at timestamptz not null default timezone('utc', now())
 );
 
