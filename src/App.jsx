@@ -1828,13 +1828,32 @@ function HouseSwatchesCard({ swatches, setSwatches, isDark }) {
                     onChange={() => toggleSwatch(s.id)}
                     isDark={isDark}
                   />
+                  {s.done ? (
+                    <CheckCircle2
+                      className={`h-4 w-4 shrink-0 ${
+                        isDark ? "text-emerald-300" : "text-emerald-700"
+                      }`}
+                    />
+                  ) : null}
                   <p
-                    className={`text-sm truncate ${
-                      s.done ? "line-through" : ""
-                    } ${completionTextClass(s.done, isDark)}`}
+                    className={`text-sm truncate ${s.done ? "font-semibold" : ""} ${completionTextClass(
+                      s.done,
+                      isDark
+                    )}`}
                   >
                     {s.text}
                   </p>
+                  {s.done ? (
+                    <Badge
+                      className={
+                        isDark
+                          ? "bg-emerald-900/40 text-emerald-200 border border-emerald-700"
+                          : "bg-emerald-100 text-emerald-800 border border-emerald-400"
+                      }
+                    >
+                      Collected
+                    </Badge>
+                  ) : null}
                 </div>
                 {isCustomSwatch ? (
                   <Button
