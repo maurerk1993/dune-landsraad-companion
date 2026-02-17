@@ -39,7 +39,7 @@ function uid() {
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const SHARED_TODOS_CACHE_KEY = "dune_landsraad_shared_todos_cache_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "3.1.0";
+const APP_VERSION = "3.2.0";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -55,6 +55,13 @@ const WEEKDAY_INDEX = {
 };
 
 const APP_CHANGE_NOTES = [
+  {
+    version: "3.2.0",
+    notes: [
+      "Improved Atreides readability with stronger contrast on text, icons, and status colors.",
+      "Retuned Atreides component surfaces/buttons to a more pleasant darker green palette.",
+    ],
+  },
   {
     version: "3.1.0",
     notes: [

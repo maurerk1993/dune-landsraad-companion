@@ -46,8 +46,50 @@
   .theme-atreides .text-\[\#7a5a2e\],
   .theme-atreides .text-\[\#5a4528\],
   .theme-atreides .text-\[\#7b6342\],
-  .theme-atreides .text-\[\#8a632f\] {
+  .theme-atreides .text-\[\#8a632f\],
+  .theme-atreides .text-\[\#3f2f1a\],
+  .theme-atreides .text-\[\#846742\],
+  .theme-atreides .text-\[\#7e6440\],
+  .theme-atreides .text-\[\#8f7652\],
+  .theme-atreides .text-\[\#9a7a4b\],
+  .theme-atreides .text-\[\#a79274\],
+  .theme-atreides .text-\[\#bfa98a\] {
     @apply text-[#c2d8ca];
+  }
+
+  .theme-atreides .text-emerald-700,
+  .theme-atreides .text-emerald-800,
+  .theme-atreides .text-emerald-700\/90 {
+    color: rgb(167 243 208 / 1);
+  }
+
+  .theme-atreides .text-emerald-400,
+  .theme-atreides .text-emerald-300,
+  .theme-atreides .text-emerald-200 {
+    color: rgb(209 250 229 / 1);
+  }
+
+  .theme-atreides .bg-emerald-50,
+  .theme-atreides .bg-emerald-100 {
+    background-color: rgb(6 78 59 / 0.3);
+  }
+
+  .theme-atreides .hover\:bg-emerald-200:hover {
+    background-color: rgb(6 95 70 / 0.5);
+  }
+
+  .theme-atreides .border-emerald-400,
+  .theme-atreides .border-emerald-500,
+  .theme-atreides .border-emerald-600 {
+    border-color: rgb(4 120 87 / 1);
+  }
+
+  .theme-atreides .bg-\[\#f1e6d2\] {
+    @apply bg-[#375246];
+  }
+
+  .theme-atreides .border-\[\#d1b487\] {
+    @apply border-[#5f846f];
   }
 
   .theme-atreides .bg-\[\#a56b2c\] {
