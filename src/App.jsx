@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,8 @@ import {
   Loader2,
   Search,
   X,
+  ExternalLink,
+  Wrench,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -38,8 +40,7 @@ function uid() {
 
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const SHARED_TODOS_CACHE_KEY = "dune_landsraad_shared_todos_cache_v1";
-const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "3.2.0";
+const APP_VERSION = "3.3.0";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -55,6 +56,13 @@ const WEEKDAY_INDEX = {
 };
 
 const APP_CHANGE_NOTES = [
+  {
+    version: "3.3.0",
+    notes: [
+      "Replaced header backup actions with a Dune Tools button and new tools page.",
+      "Added quick-launch tool tiles for database, maps, base calculator, and server status.",
+    ],
+  },
   {
     version: "3.2.0",
     notes: [
@@ -133,6 +141,33 @@ const APP_CHANGE_NOTES = [
   {
     version: "1.7.0",
     notes: ["Added subtle spice-inspired purple/red ambient accents to dark mode."],
+  },
+];
+
+const DUNE_TOOLS_LINKS = [
+  {
+    id: "dune-gaming-tools",
+    name: "Dune Gaming Tools",
+    description: "Dune item database and drop locations.",
+    href: "https://dune.gaming.tools/items",
+  },
+  {
+    id: "method-dd-companion",
+    name: "Method.gg",
+    description: "Best DD map, DD and overland labs drop tables.",
+    href: "https://www.method.gg/dune-awakening/deep-desert-companion",
+  },
+  {
+    id: "dune-base-calculator",
+    name: "Dune Base Calculator",
+    description: "Plan and optimize your base setups.",
+    href: "https://tools.tcno.co/dune",
+  },
+  {
+    id: "dune-server-status-andioyu",
+    name: "Dune Server Status: Andioyu",
+    description: "Check current Andioyu world status.",
+    href: "https://dunestatus.com/worlds/andioyu",
   },
 ];
 
@@ -1901,6 +1936,55 @@ function HouseSwatchesCard({ swatches, setSwatches, isDark }) {
   );
 }
 
+function DuneToolsCard({ isDark }) {
+  return (
+    <Card
+      className={`rounded-2xl border shadow-lg shadow-black/10 backdrop-blur-[1px] ${
+        isDark ? "bg-[#16120e] border-[#3e3122]" : "bg-[#fff9ef] border-[#d8bc91]"
+      }`}
+    >
+      <CardHeader className="space-y-3">
+        <SectionHeader
+          icon={Wrench}
+          title="Dune Tools"
+          subtitle="Quick-launch links for planning, mapping, and server checks."
+          isDark={isDark}
+        />
+      </CardHeader>
+
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {DUNE_TOOLS_LINKS.map((tool) => (
+            <a
+              key={tool.id}
+              href={tool.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`rounded-xl border p-4 transition-colors ${
+                isDark
+                  ? "bg-[#1b1510] border-[#4a3a25] hover:bg-[#241c14]"
+                  : "bg-[#fff7e8] border-[#d8bc91] hover:bg-[#f5e6cd]"
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className={`text-sm font-semibold ${isDark ? "text-[#f2e7d5]" : "text-[#3a2b17]"}`}>
+                    {tool.name}
+                  </p>
+                  <p className={`mt-1 text-xs ${isDark ? "text-[#c8bca7]" : "text-[#6b5636]"}`}>
+                    {tool.description}
+                  </p>
+                </div>
+                <ExternalLink className={`h-4 w-4 shrink-0 ${isDark ? "text-[#ccb089]" : "text-[#7d5c31]"}`} />
+              </div>
+            </a>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function AuthGate({ onSignedIn, isDark, isAtreides, isSpice }) {
   const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
@@ -2051,7 +2135,6 @@ function AuthGate({ onSignedIn, isDark, isAtreides, isSpice }) {
 }
 
 export default function App() {
-  const fileInputRef = useRef(null);
   const isMobile = useIsMobile();
 
   const defaults = makeDefaultState();
@@ -2076,6 +2159,7 @@ export default function App() {
   const [sharedTodosReady, setSharedTodosReady] = useState(false);
   const [lastSharedTodosError, setLastSharedTodosError] = useState(null);
   const [showChangeNotes, setShowChangeNotes] = useState(false);
+  const [activeTab, setActiveTab] = useState("landsraad");
   const [weeklyResetCountdown, setWeeklyResetCountdown] = useState(() =>
     getTimeUntilNextTuesdayMidnightEt()
   );
@@ -2370,63 +2454,6 @@ export default function App() {
     return () => clearTimeout(t);
   }, [session?.user?.id, hydrated, sharedTodosReady, sessionTodos]);
 
-  const exportBackup = () => {
-    if (typeof window === "undefined") return;
-    const payload = {
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      app: "Dune Awakening: Landsraad Companion",
-      data: {
-        isDark,
-        themeMode,
-        materials,
-        farmItems,
-        generalTodos,
-        landsraadHouses,
-        houseSwatches,
-        trackedOnlyMode,
-      },
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${BACKUP_FILENAME_PREFIX}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  };
-
-  const importBackupFromFile = (file) => {
-    if (!file || typeof window === "undefined") return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const parsed = safeParse(String(e.target?.result || ""), null);
-      const d = parsed?.data && typeof parsed.data === "object" ? parsed.data : parsed;
-      if (!d || typeof d !== "object") return window.alert("Invalid backup file format.");
-
-      if (typeof d.themeMode === "string") {
-        setThemeMode(d.themeMode);
-      } else if (typeof d.isDark === "boolean") {
-        setThemeMode(d.isDark ? "dark" : "light");
-      }
-      if (Array.isArray(d.materials)) setMaterials(d.materials);
-      if (Array.isArray(d.farmItems)) setFarmItems(d.farmItems);
-      if (Array.isArray(d.generalTodos)) setGeneralTodos(d.generalTodos);
-      if (Array.isArray(d.landsraadHouses)) {
-        setLandsraadHouses(normalizeLandsraadHouses(d.landsraadHouses));
-      }
-      if (Array.isArray(d.houseSwatches)) setHouseSwatches(normalizeHouseSwatches(d.houseSwatches));
-      if (typeof d.trackedOnlyMode === "boolean") setTrackedOnlyMode(d.trackedOnlyMode);
-
-      window.alert("Backup imported successfully.");
-    };
-    reader.readAsText(file);
-  };
-
   const signOut = async () => {
     await supabase.auth.signOut();
     setSession(null);
@@ -2484,37 +2511,15 @@ export default function App() {
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={exportBackup}
+                  onClick={() => setActiveTab("dune-tools")}
                   className={`inline-flex items-center rounded-md h-9 px-3 text-sm border ${
                     isDark
                       ? "border-[#5a462c] text-[#e6d0ac] hover:bg-[#2a2118]"
                       : "border-[#c9a878] text-[#6d4f27] hover:bg-[#efdfc2]"
                   }`}
                 >
-                  Export Backup
+                  Dune Tools
                 </button>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`inline-flex items-center rounded-md h-9 px-3 text-sm border ${
-                    isDark
-                      ? "border-[#5a462c] text-[#e6d0ac] hover:bg-[#2a2118]"
-                      : "border-[#c9a878] text-[#6d4f27] hover:bg-[#efdfc2]"
-                  }`}
-                >
-                  Import Backup
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="application/json,.json"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    importBackupFromFile(f);
-                    e.target.value = "";
-                  }}
-                />
               </div>
             </div>
 
@@ -2596,7 +2601,7 @@ export default function App() {
           </div>
         </motion.div>
 
-        <Tabs defaultValue="landsraad" className="space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList
             className={`${
               isMobile
@@ -2629,6 +2634,9 @@ export default function App() {
             </TabsTrigger>
             <TabsTrigger value="general" className={`rounded-xl gap-2 ${isMobile ? "shrink-0" : ""}`}>
               <ListTodo className="h-4 w-4" /> General To-Do
+            </TabsTrigger>
+            <TabsTrigger value="dune-tools" className={`rounded-xl gap-2 ${isMobile ? "shrink-0" : ""}`}>
+              <Wrench className="h-4 w-4" /> Dune Tools
             </TabsTrigger>
           </TabsList>
 
@@ -2682,6 +2690,10 @@ export default function App() {
               placeholder="e.g., Clean stash / sort schematics"
               isDark={isDark}
             />
+          </TabsContent>
+
+          <TabsContent value="dune-tools">
+            <DuneToolsCard isDark={isDark} />
           </TabsContent>
         </Tabs>
       </div>
