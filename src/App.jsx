@@ -44,7 +44,7 @@ function uid() {
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const SHARED_TODOS_CACHE_KEY = "dune_landsraad_shared_todos_cache_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "3.4.0";
+const APP_VERSION = "3.4.1";
 const NEW_YORK_TIME_ZONE = "America/New_York";
 const ADMIN_EMAIL = "maurerk1993@gmail.com";
 const LOCATION_CONTENT_KEY = "global";
@@ -61,6 +61,13 @@ const WEEKDAY_INDEX = {
 };
 
 const APP_CHANGE_NOTES = [
+  {
+    version: "3.4.1",
+    notes: [
+      "Added an admin-only Hide Admin Controls toggle on Dune Tools so links can be viewed without edit controls.",
+      "Kept Dune Tools editing available behind a Show Admin Controls toggle when needed.",
+    ],
+  },
   {
     version: "3.4.0",
     notes: [
@@ -2292,6 +2299,7 @@ function DuneToolsCard({ isDark, isAdmin, tools, setTools }) {
   const [nameInput, setNameInput] = useState("");
   const [urlInput, setUrlInput] = useState("");
   const [notesInput, setNotesInput] = useState("");
+  const [showAdminControls, setShowAdminControls] = useState(true);
 
   const addTool = () => {
     const name = nameInput.trim();
@@ -2321,6 +2329,23 @@ function DuneToolsCard({ isDark, isAdmin, tools, setTools }) {
       </CardHeader>
       <CardContent className="space-y-4">
         {isAdmin ? (
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAdminControls((prev) => !prev)}
+              className={
+                isDark
+                  ? "border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#e6d0ac]"
+                  : "border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
+              }
+            >
+              {showAdminControls ? "Hide Admin Controls" : "Show Admin Controls"}
+            </Button>
+          </div>
+        ) : null}
+        {isAdmin && showAdminControls ? (
           <div className={`rounded-xl border p-3 space-y-2 ${isDark ? "border-[#4a3a25] bg-[#211910]" : "border-[#d8bc91] bg-[#fff3df]"}`}>
             <p className={`text-xs ${isDark ? "text-[#c8bca7]" : "text-[#7a6342]"}`}>
               Admin mode: Add, remove, and annotate tools for everyone.
@@ -2350,7 +2375,7 @@ function DuneToolsCard({ isDark, isAdmin, tools, setTools }) {
                     Open link <ExternalLink className="h-3 w-3" />
                   </a>
                 </div>
-                {isAdmin ? (
+                {isAdmin && showAdminControls ? (
                   <Button variant="ghost" size="icon" onClick={() => removeTool(tool.id)} className={isDark ? "text-[#ccb089] hover:bg-[#2a2118]" : "text-[#7d5c31] hover:bg-[#efe1c8]"}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
