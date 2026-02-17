@@ -44,7 +44,7 @@ function uid() {
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const SHARED_TODOS_CACHE_KEY = "dune_landsraad_shared_todos_cache_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "3.4.1";
+const APP_VERSION = "3.4.2";
 const NEW_YORK_TIME_ZONE = "America/New_York";
 const ADMIN_EMAIL = "maurerk1993@gmail.com";
 const LOCATION_CONTENT_KEY = "global";
@@ -61,6 +61,13 @@ const WEEKDAY_INDEX = {
 };
 
 const APP_CHANGE_NOTES = [
+  {
+    version: "3.4.2",
+    notes: [
+      "Moved Dune Tools admin controls to the bottom of the card so tool links are shown first.",
+      "Set Dune Tools admin controls to stay hidden by default until Show Admin Controls is clicked.",
+    ],
+  },
   {
     version: "3.4.1",
     notes: [
@@ -2299,7 +2306,7 @@ function DuneToolsCard({ isDark, isAdmin, tools, setTools }) {
   const [nameInput, setNameInput] = useState("");
   const [urlInput, setUrlInput] = useState("");
   const [notesInput, setNotesInput] = useState("");
-  const [showAdminControls, setShowAdminControls] = useState(true);
+  const [showAdminControls, setShowAdminControls] = useState(false);
 
   const addTool = () => {
     const name = nameInput.trim();
@@ -2328,43 +2335,6 @@ function DuneToolsCard({ isDark, isAdmin, tools, setTools }) {
         />
       </CardHeader>
       <CardContent className="space-y-4">
-        {isAdmin ? (
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAdminControls((prev) => !prev)}
-              className={
-                isDark
-                  ? "border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#e6d0ac]"
-                  : "border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
-              }
-            >
-              {showAdminControls ? "Hide Admin Controls" : "Show Admin Controls"}
-            </Button>
-          </div>
-        ) : null}
-        {isAdmin && showAdminControls ? (
-          <div className={`rounded-xl border p-3 space-y-2 ${isDark ? "border-[#4a3a25] bg-[#211910]" : "border-[#d8bc91] bg-[#fff3df]"}`}>
-            <p className={`text-xs ${isDark ? "text-[#c8bca7]" : "text-[#7a6342]"}`}>
-              Admin mode: Add, remove, and annotate tools for everyone.
-            </p>
-            <Input value={nameInput} onChange={(e) => setNameInput(e.target.value)} placeholder="Tool name" className={isDark ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]" : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"} />
-            <Input value={urlInput} onChange={(e) => setUrlInput(e.target.value)} placeholder="https://..." className={isDark ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]" : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"} />
-            <textarea
-              value={notesInput}
-              onChange={(e) => setNotesInput(e.target.value)}
-              rows={2}
-              placeholder="Quick notes"
-              className={`w-full rounded-md border px-3 py-2 text-sm ${isDark ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]" : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"}`}
-            />
-            <Button onClick={addTool} className={isDark ? "gap-2 bg-[#c48a3a] hover:bg-[#d59a48] text-[#1a1208]" : "gap-2 bg-[#a56b2c] hover:bg-[#8d5821] text-[#fff4de]"}>
-              <Plus className="h-4 w-4" /> Add Tool
-            </Button>
-          </div>
-        ) : null}
-
         <div className="space-y-3">
           {tools.map((tool) => (
             <div key={tool.id} className={`rounded-xl border p-3 ${isDark ? "border-[#3f3124] bg-[#1b1510]" : "border-[#d8bc91] bg-[#fff7e8]"}`}>
@@ -2385,6 +2355,44 @@ function DuneToolsCard({ isDark, isAdmin, tools, setTools }) {
             </div>
           ))}
         </div>
+        {isAdmin ? (
+          <div className="space-y-3 pt-2">
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAdminControls((prev) => !prev)}
+                className={
+                  isDark
+                    ? "border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#e6d0ac]"
+                    : "border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
+                }
+              >
+                {showAdminControls ? "Hide Admin Controls" : "Show Admin Controls"}
+              </Button>
+            </div>
+            {showAdminControls ? (
+              <div className={`rounded-xl border p-3 space-y-2 ${isDark ? "border-[#4a3a25] bg-[#211910]" : "border-[#d8bc91] bg-[#fff3df]"}`}>
+                <p className={`text-xs ${isDark ? "text-[#c8bca7]" : "text-[#7a6342]"}`}>
+                  Admin mode: Add, remove, and annotate tools for everyone.
+                </p>
+                <Input value={nameInput} onChange={(e) => setNameInput(e.target.value)} placeholder="Tool name" className={isDark ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]" : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"} />
+                <Input value={urlInput} onChange={(e) => setUrlInput(e.target.value)} placeholder="https://..." className={isDark ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]" : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"} />
+                <textarea
+                  value={notesInput}
+                  onChange={(e) => setNotesInput(e.target.value)}
+                  rows={2}
+                  placeholder="Quick notes"
+                  className={`w-full rounded-md border px-3 py-2 text-sm ${isDark ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]" : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"}`}
+                />
+                <Button onClick={addTool} className={isDark ? "gap-2 bg-[#c48a3a] hover:bg-[#d59a48] text-[#1a1208]" : "gap-2 bg-[#a56b2c] hover:bg-[#8d5821] text-[#fff4de]"}>
+                  <Plus className="h-4 w-4" /> Add Tool
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );
