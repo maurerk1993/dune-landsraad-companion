@@ -625,7 +625,7 @@ function TodoListCard({
                     isDark
                   )}`}
                 >
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex flex-1 items-center gap-3 min-w-0">
                     <CheckboxControl
                       checked={item.done}
                       onChange={() => toggle(item.id)}
@@ -658,11 +658,11 @@ function TodoListCard({
                     variant="ghost"
                     size="icon"
                     onClick={() => remove(item.id)}
-                    className={
+                    className={`shrink-0 ${
                       isDark
                         ? "text-[#ccb089] hover:bg-[#2a2118]"
                         : "text-[#7d5c31] hover:bg-[#efe1c8]"
-                    }
+                    }`}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -771,7 +771,7 @@ function MaterialsCard({ materials, setMaterials, isDark }) {
                   isDark
                 )}`}
               >
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex flex-1 items-center gap-3 min-w-0">
                   <CheckboxControl
                     checked={m.done}
                     onChange={() => toggle(m.id)}
@@ -794,11 +794,11 @@ function MaterialsCard({ materials, setMaterials, isDark }) {
                   variant="ghost"
                   size="icon"
                   onClick={() => remove(m.id)}
-                  className={
+                  className={`shrink-0 ${
                     isDark
                       ? "text-[#ccb089] hover:bg-[#2a2118]"
                       : "text-[#7d5c31] hover:bg-[#efe1c8]"
-                  }
+                  }`}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -900,7 +900,7 @@ function ItemsCard({ items, setItems, isDark }) {
                   isDark
                 )}`}
               >
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex flex-1 items-center gap-3 min-w-0">
                   <CheckboxControl
                     checked={i.done}
                     onChange={() => toggle(i.id)}
@@ -928,11 +928,11 @@ function ItemsCard({ items, setItems, isDark }) {
                   variant="ghost"
                   size="icon"
                   onClick={() => remove(i.id)}
-                  className={
+                  className={`shrink-0 ${
                     isDark
                       ? "text-[#ccb089] hover:bg-[#2a2118]"
                       : "text-[#7d5c31] hover:bg-[#efe1c8]"
-                  }
+                  }`}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -2691,7 +2691,7 @@ export default function App() {
               </div>
 
               <div
-                className={`rounded-xl border px-3 py-2 text-xs min-w-[220px] ${
+                className={`w-full sm:w-auto rounded-xl border px-3 py-2 text-xs sm:min-w-[220px] ${
                   isDark
                     ? "border-[#4a3a25] bg-[#1b1510] text-[#e6d0ac]"
                     : isAtreides
@@ -2718,7 +2718,7 @@ export default function App() {
               isMobile
                 ? "flex overflow-x-auto whitespace-nowrap"
                 : "grid grid-cols-2 md:grid-cols-6"
-            } gap-2 h-auto rounded-2xl p-1.5 border shadow-lg backdrop-blur-sm ${
+            } w-full gap-2 h-auto rounded-2xl p-1.5 border shadow-lg backdrop-blur-sm ${
               isDark
                 ? "bg-[#18130e]/85 border-[#5a452a] shadow-[#00000066]"
                 : isAtreides
