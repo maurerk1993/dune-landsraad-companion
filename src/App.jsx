@@ -2669,7 +2669,6 @@ export default function App() {
           </TabsContent>
 
         </Tabs>
-        )}
       </div>
 
       <div className="fixed bottom-3 right-4 flex flex-col items-end gap-2">
