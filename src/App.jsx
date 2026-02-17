@@ -14,7 +14,6 @@ import {
   Package,
   Pickaxe,
   ListTodo,
-  Users,
   CheckCircle2,
   Circle,
   Moon,
@@ -37,8 +36,20 @@ function uid() {
 
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
+const APP_VERSION = "1.0.0";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
+const NEW_YORK_TIME_ZONE = "America/New_York";
+
+const WEEKDAY_INDEX = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6,
+};
 
 function safeParse(json, fallback) {
   try {
@@ -53,6 +64,93 @@ function houseAnchorSlug(houseName) {
     ? houseName.slice(6)
     : houseName;
   return base.toLowerCase().split(" ").filter(Boolean).join("-");
+}
+
+function getTimeZoneOffsetMs(date, timeZone) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+
+  const map = Object.fromEntries(
+    parts
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, Number(part.value)])
+  );
+
+  const asUtc = Date.UTC(map.year, map.month - 1, map.day, map.hour, map.minute, map.second);
+  return asUtc - date.getTime();
+}
+
+function zonedDateTimeToUtcDate({ year, month, day, hour = 0, minute = 0, second = 0 }, timeZone) {
+  const utc = Date.UTC(year, month - 1, day, hour, minute, second);
+
+  let timestamp = utc;
+  for (let i = 0; i < 2; i += 1) {
+    const offset = getTimeZoneOffsetMs(new Date(timestamp), timeZone);
+    timestamp = utc - offset;
+  }
+
+  return new Date(timestamp);
+}
+
+function getTimeUntilNextTuesdayMidnightEt(now = new Date()) {
+  const nyDateParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: NEW_YORK_TIME_ZONE,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    hour12: false,
+    weekday: "short",
+  }).formatToParts(now);
+
+  const map = Object.fromEntries(
+    nyDateParts
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, part.value])
+  );
+
+  const year = Number(map.year);
+  const month = Number(map.month);
+  const day = Number(map.day);
+  const weekday = WEEKDAY_INDEX[map.weekday] ?? 0;
+
+  let daysUntilTuesday = (2 - weekday + 7) % 7;
+  if (daysUntilTuesday === 0) {
+    daysUntilTuesday = 7;
+  }
+
+  const targetEtMidnight = zonedDateTimeToUtcDate(
+    {
+      year,
+      month,
+      day: day + daysUntilTuesday,
+      hour: 0,
+      minute: 0,
+      second: 0,
+    },
+    NEW_YORK_TIME_ZONE
+  );
+
+  return Math.max(0, targetEtMidnight.getTime() - now.getTime());
+}
+
+function formatCountdown(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${days}d ${hours}h ${minutes}m ${seconds}s`;
 }
 
 const ALL_LANDSRAAD_HOUSES = [
@@ -245,7 +343,7 @@ function TodoListCard({
 
   return (
     <Card
-      className={`rounded-2xl shadow-sm border ${
+      className={`rounded-2xl border shadow-lg shadow-black/10 backdrop-blur-[1px] ${
         isDark
           ? "bg-[#16120e] border-[#3e3122]"
           : "bg-[#fff9ef] border-[#d8bc91]"
@@ -373,7 +471,7 @@ function MaterialsCard({ materials, setMaterials, isDark }) {
 
   return (
     <Card
-      className={`rounded-2xl shadow-sm border ${
+      className={`rounded-2xl border shadow-lg shadow-black/10 backdrop-blur-[1px] ${
         isDark
           ? "bg-[#16120e] border-[#3e3122]"
           : "bg-[#fff9ef] border-[#d8bc91]"
@@ -504,7 +602,7 @@ function ItemsCard({ items, setItems, isDark }) {
 
   return (
     <Card
-      className={`rounded-2xl shadow-sm border ${
+      className={`rounded-2xl border shadow-lg shadow-black/10 backdrop-blur-[1px] ${
         isDark
           ? "bg-[#16120e] border-[#3e3122]"
           : "bg-[#fff9ef] border-[#d8bc91]"
@@ -623,6 +721,7 @@ function LandsraadCard({ houses, setHouses, isDark }) {
   const [rewardName, setRewardName] = useState("");
   const [requiredAmount, setRequiredAmount] = useState("");
   const [targetHouseId, setTargetHouseId] = useState("");
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const totalGoals = houses.reduce((acc, h) => acc + h.goals.length, 0);
   const achievedGoals = houses.reduce(
@@ -640,7 +739,7 @@ function LandsraadCard({ houses, setHouses, isDark }) {
       houses.map((h) => ({
         ...h,
         current: 0,
-        goals: h.goals.map((g) => ({ ...g, done: false })),
+        goals: [],
       }))
     );
   };
@@ -696,7 +795,7 @@ function LandsraadCard({ houses, setHouses, isDark }) {
   return (
     <div className="space-y-4">
       <Card
-        className={`rounded-2xl shadow-sm border ${
+        className={`rounded-2xl border shadow-lg shadow-black/10 backdrop-blur-[1px] ${
           isDark ? "bg-[#16120e] border-[#3e3122]" : "bg-[#fff9ef] border-[#d8bc91]"
         }`}
       >
@@ -724,7 +823,7 @@ function LandsraadCard({ houses, setHouses, isDark }) {
         <CardContent className="space-y-4">
           <div className="flex justify-end">
             <Button
-              onClick={resetWeek}
+              onClick={() => setShowResetConfirm(true)}
               variant="outline"
               className={
                 isDark
@@ -732,7 +831,7 @@ function LandsraadCard({ houses, setHouses, isDark }) {
                   : "gap-2 border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
               }
             >
-              <RotateCcw className="h-4 w-4" /> Reset for Week
+              <RotateCcw className="h-4 w-4" /> Reset Week (Clear Goals)
             </Button>
           </div>
 
@@ -807,7 +906,7 @@ function LandsraadCard({ houses, setHouses, isDark }) {
             </div>
           </div>
 
-          <ScrollArea className="h-[360px] pr-2">
+          <ScrollArea className="h-[calc(100vh-17rem)] min-h-[620px] pr-2">
             <div className="space-y-3">
               {sortedHouses.map((h) => {
                 const doneCount = h.goals.filter((g) => g.done).length;
@@ -868,14 +967,20 @@ function LandsraadCard({ houses, setHouses, isDark }) {
 
                       <div className="flex items-center gap-2">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => togglePinned(h.id)}
-                          className={
-                            isDark ? "text-[#ccb089] hover:bg-[#2a2118]" : "text-[#7d5c31] hover:bg-[#efe1c8]"
-                          }
+                          className={`border ${
+                            h.pinned
+                              ? isDark
+                                ? "border-emerald-400 bg-emerald-900/40 text-emerald-200 hover:bg-emerald-800/50"
+                                : "border-emerald-600 bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                              : isDark
+                                ? "border-[#5a462c] bg-[#1f1710] text-[#e6d0ac] hover:bg-[#2a2118]"
+                                : "border-[#c9a878] bg-[#f7ead2] text-[#7d5c31] hover:bg-[#efe1c8]"
+                          }`}
                         >
-                          {h.pinned ? "Untrack" : "Track"}
+                          {h.pinned ? "Tracked" : "Track"}
                         </Button>
 
                         <Label className={`text-xs ${isDark ? "text-[#ceb89a]" : "text-[#6b5636]"}`}>
@@ -994,6 +1099,50 @@ function LandsraadCard({ houses, setHouses, isDark }) {
           </ScrollArea>
         </CardContent>
       </Card>
+
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
+          <div
+            className={`w-full max-w-md rounded-2xl border p-5 shadow-2xl ${
+              isDark ? "bg-[#1a140f] border-[#5a452a] text-[#f2e7d5]" : "bg-[#fff8ec] border-[#c9a878] text-[#3a2b17]"
+            }`}
+          >
+            <h3 className="text-base font-semibold">Reset Landsraad progress for the week?</h3>
+            <p className={`mt-2 text-sm ${isDark ? "text-[#d8c3a1]" : "text-[#6b5636]"}`}>
+              This will clear all house progress and remove any reward goals you manually entered.
+            </p>
+            <p className={`mt-1 text-xs ${isDark ? "text-[#a79274]" : "text-[#7a6342]"}`}>
+              This action cannot be undone.
+            </p>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowResetConfirm(false)}
+                className={
+                  isDark
+                    ? "border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#e6d0ac]"
+                    : "border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
+                }
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  resetWeek();
+                  setShowResetConfirm(false);
+                }}
+                className={
+                  isDark
+                    ? "bg-[#b26e2b] hover:bg-[#ca7b31] text-[#1a1208]"
+                    : "bg-[#a56b2c] hover:bg-[#8d5821] text-[#fff4de]"
+                }
+              >
+                Accept Reset
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1015,7 +1164,7 @@ function HouseSwatchesCard({ swatches, setSwatches, isDark }) {
 
   return (
     <Card
-      className={`rounded-2xl shadow-sm border ${
+      className={`rounded-2xl border shadow-lg shadow-black/10 backdrop-blur-[1px] ${
         isDark
           ? "bg-[#16120e] border-[#3e3122]"
           : "bg-[#fff9ef] border-[#d8bc91]"
@@ -1141,7 +1290,7 @@ function AuthGate({ onSignedIn, isDark }) {
       className={`min-h-screen w-full flex items-center justify-center p-4 ${
         isDark
           ? "bg-[radial-gradient(circle_at_top,_#2a1c12_0%,_#120f0c_45%,_#0d0b09_100%)] text-[#f2e7d5]"
-          : "bg-[radial-gradient(circle_at_top,_#f6e9d3_0%,_#f2e4cd_45%,_#ebd9bd_100%)] text-[#3a2b17]"
+          : "bg-[radial-gradient(1200px_500px_at_15%_8%,_#fff0cd_0%,_#f6e3c0_35%,_transparent_70%),radial-gradient(900px_420px_at_85%_22%,_#efd5a6_0%,_#e4c38d_40%,_transparent_72%),linear-gradient(165deg,_#f8e8c9_0%,_#edd7b2_44%,_#dcc08f_100%)] text-[#3a2b17]"
       }`}
     >
       <Card
@@ -1266,6 +1415,9 @@ export default function App() {
   const [generalTodos, setGeneralTodos] = useState(defaults.generalTodos);
   const [landsraadHouses, setLandsraadHouses] = useState(defaults.landsraadHouses);
   const [houseSwatches, setHouseSwatches] = useState(defaults.houseSwatches);
+  const [weeklyResetCountdown, setWeeklyResetCountdown] = useState(() =>
+    getTimeUntilNextTuesdayMidnightEt()
+  );
 
   // Auth bootstrap
   useEffect(() => {
@@ -1388,6 +1540,14 @@ export default function App() {
     houseSwatches,
   ]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setWeeklyResetCountdown(getTimeUntilNextTuesdayMidnightEt());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   // cloud autosave (debounced)
   useEffect(() => {
     if (!session?.user?.id || !hydrated || !cloudReady) return;
@@ -1503,26 +1663,19 @@ export default function App() {
       className={`min-h-screen w-full transition-colors ${
         isDark
           ? "bg-[radial-gradient(circle_at_top,_#2a1c12_0%,_#120f0c_45%,_#0d0b09_100%)] text-[#f2e7d5]"
-          : "bg-[radial-gradient(circle_at_top,_#f6e9d3_0%,_#f2e4cd_45%,_#ebd9bd_100%)] text-[#3a2b17]"
+          : "bg-[radial-gradient(1200px_500px_at_15%_8%,_#fff0cd_0%,_#f6e3c0_35%,_transparent_70%),radial-gradient(900px_420px_at_85%_22%,_#efd5a6_0%,_#e4c38d_40%,_transparent_72%),linear-gradient(165deg,_#f8e8c9_0%,_#edd7b2_44%,_#dcc08f_100%)] text-[#3a2b17]"
       }`}
     >
       <div className="mx-auto max-w-7xl p-4 md:p-8 space-y-6">
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`rounded-3xl border p-6 md:p-8 shadow-sm backdrop-blur-sm ${
-            isDark ? "bg-[#18130e]/80 border-[#4a3a25]" : "bg-[#fff4df]/80 border-[#c9a878]"
+          className={`rounded-3xl border p-6 md:p-8 shadow-xl backdrop-blur-md ${
+            isDark ? "bg-[#18130e]/85 border-[#5a452a] shadow-[#00000066]" : "bg-[#fff4df]/90 border-[#c9a878] shadow-[#9b7a4555]"
           }`}
         >
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="space-y-2">
-              <div
-                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs ${
-                  isDark ? "border-[#5a462c] text-[#ccb089]" : "border-[#caa779] text-[#76572f]"
-                }`}
-              >
-                <Users className="h-3.5 w-3.5" /> Co-op Tracker
-              </div>
               <h1 className="text-2xl md:text-4xl font-bold tracking-tight">
                 Dune Awakening: Landsraad Companion
               </h1>
@@ -1607,14 +1760,29 @@ export default function App() {
                     ? "Saving to cloud..."
                     : "Cloud sync active"}
               </div>
+
+              <div
+                className={`rounded-xl border px-3 py-2 text-xs min-w-[220px] ${
+                  isDark
+                    ? "border-[#4a3a25] bg-[#1b1510] text-[#e6d0ac]"
+                    : "border-[#c9a878] bg-[#f7ead2] text-[#6d4f27]"
+                }`}
+              >
+                <div className="flex items-center gap-2 font-semibold">
+                  <Clock3 className="h-3.5 w-3.5" /> Weekly Reset (Tue 12:00 AM EST)
+                </div>
+                <div className={`${isDark ? "text-[#c8bca7]" : "text-[#7a6342]"}`}>
+                  {formatCountdown(weeklyResetCountdown)}
+                </div>
+              </div>
             </div>
           </div>
         </motion.div>
 
         <Tabs defaultValue="coop" className="space-y-4">
           <TabsList
-            className={`grid grid-cols-2 md:grid-cols-6 gap-2 h-auto rounded-2xl p-1 border ${
-              isDark ? "bg-[#18130e]/80 border-[#4a3a25]" : "bg-[#fff3dc] border-[#c9a878]"
+            className={`grid grid-cols-2 md:grid-cols-6 gap-2 h-auto rounded-2xl p-1.5 border shadow-lg backdrop-blur-sm ${
+              isDark ? "bg-[#18130e]/85 border-[#5a452a] shadow-[#00000066]" : "bg-[#fff3dc]/95 border-[#c9a878] shadow-[#9b7a4555]"
             }`}
           >
             <TabsTrigger value="coop" className="rounded-xl gap-2">
@@ -1677,6 +1845,14 @@ export default function App() {
             />
           </TabsContent>
         </Tabs>
+      </div>
+
+      <div
+        className={`fixed bottom-3 right-4 text-xs font-medium tracking-wide ${
+          isDark ? "text-[#8f7652]" : "text-[#7e6440]"
+        }`}
+      >
+        v{APP_VERSION}
       </div>
     </div>
   );
