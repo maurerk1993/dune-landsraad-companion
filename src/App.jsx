@@ -1065,6 +1065,8 @@ function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedO
     );
   };
 
+  const trackedRoute = sortedHouses.filter((house) => house.pinned);
+
   return (
     <div className="space-y-4">
       <Card
