@@ -36,7 +36,7 @@ function uid() {
 
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "1.4.0";
+const APP_VERSION = "1.5.0";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -858,7 +858,7 @@ function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedO
           <SectionHeader
             icon={Landmark}
             title="Landsraad Operations Console"
-            subtitle="Track house progress, apply templates, and command weekly turn-ins."
+            subtitle="Track house progress, add goal descriptions, and command weekly turn-ins."
             isDark={isDark}
           />
           <div className="flex flex-wrap items-center gap-2">
@@ -915,6 +915,77 @@ function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedO
             >
               <RotateCcw className="h-4 w-4" /> Reset Week (Clear Goals)
             </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
+            <div className="md:col-span-4">
+              <Label className={`text-xs ${isDark ? "text-[#ceb89a]" : "text-[#6b5636]"}`}>
+                Select House
+              </Label>
+              <select
+                value={targetHouseId}
+                onChange={(e) => setTargetHouseId(e.target.value)}
+                className={`h-10 w-full rounded-md border px-3 text-sm ${
+                  isDark
+                    ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]"
+                    : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"
+                }`}
+              >
+                <option value="">Select house</option>
+                {sortedHouses.map((house) => (
+                  <option key={house.id} value={house.id}>
+                    {house.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="md:col-span-5">
+              <Label className={`text-xs ${isDark ? "text-[#ceb89a]" : "text-[#6b5636]"}`}>
+                Goal Description
+              </Label>
+              <Input
+                value={rewardName}
+                onChange={(e) => setRewardName(e.target.value)}
+                placeholder="e.g., Weekly Cache Turn-In"
+                className={
+                  isDark
+                    ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]"
+                    : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"
+                }
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <Label className={`text-xs ${isDark ? "text-[#ceb89a]" : "text-[#6b5636]"}`}>
+                Goal Value
+              </Label>
+              <Input
+                type="number"
+                min={1}
+                value={requiredAmount}
+                onChange={(e) => setRequiredAmount(e.target.value)}
+                placeholder="5000"
+                className={
+                  isDark
+                    ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]"
+                    : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"
+                }
+              />
+            </div>
+
+            <div className="md:col-span-1 flex items-end">
+              <Button
+                onClick={addGoal}
+                className={
+                  isDark
+                    ? "w-full gap-2 bg-[#c48a3a] hover:bg-[#d59a48] text-[#1a1208]"
+                    : "w-full gap-2 bg-[#a56b2c] hover:bg-[#8d5821] text-[#fff4de]"
+                }
+              >
+                <Plus className="h-4 w-4" /> Add
+              </Button>
+            </div>
           </div>
 
           <div
