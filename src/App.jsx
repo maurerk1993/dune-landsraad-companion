@@ -30,6 +30,8 @@ import {
   Search,
   X,
   Settings,
+  Pencil,
+  EyeOff,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -40,7 +42,7 @@ function uid() {
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const SHARED_TODOS_CACHE_KEY = "dune_landsraad_shared_todos_cache_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "3.2.2";
+const APP_VERSION = "3.3.0";
 const NEW_YORK_TIME_ZONE = "America/New_York";
 const ADMIN_EMAIL = "maurerk1993@gmail.com";
 const LOCATION_CONTENT_KEY = "global";
@@ -57,6 +59,15 @@ const WEEKDAY_INDEX = {
 };
 
 const APP_CHANGE_NOTES = [
+  {
+    version: "3.3.0",
+    notes: [
+      "Added edit (pencil) actions beside delete controls on Shared To-Do, Materials, and Items to Farm entries.",
+      "Added Hide Completed toggles to Shared To-Do, Materials, and Items to Farm lists.",
+      "Items to Farm now uses a Farm Source dropdown fed by admin-managed farm source options.",
+      "Expanded admin settings so farm sources can be added/removed and synced for all users.",
+    ],
+  },
   {
     version: "3.2.2",
     notes: [
@@ -376,6 +387,18 @@ function normalizeHouseLocationEntries(entries = {}) {
   }, {});
 }
 
+function normalizeFarmSources(sources = []) {
+  if (!Array.isArray(sources)) return [];
+
+  return Array.from(
+    new Set(
+      sources
+        .map((source) => String(source || "").trim())
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
+}
+
 function makeDefaultHouseSwatches() {
   return ALL_LANDSRAAD_HOUSES.map((houseName) => ({
     id: uid(),
@@ -430,6 +453,7 @@ function makeDefaultState() {
         done: false,
       },
     ],
+    farmSources: ["Contracts", "Deep Desert", "Testing Labs"],
     generalTodos: [
       { id: uid(), text: "Refill water before run", done: false },
       { id: uid(), text: "Move old loot to storage", done: false },
@@ -556,6 +580,9 @@ function TodoListCard({
   isDark,
 }) {
   const [text, setText] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [editingText, setEditingText] = useState("");
+  const [hideCompleted, setHideCompleted] = useState(false);
   const completed = useMemo(() => items.filter((i) => i.done).length, [items]);
 
   const add = () => {
@@ -568,6 +595,21 @@ function TodoListCard({
   const toggle = (id) =>
     setItems(items.map((i) => (i.id === id ? { ...i, done: !i.done } : i)));
   const remove = (id) => setItems(items.filter((i) => i.id !== id));
+
+  const startEdit = (item) => {
+    setEditingId(item.id);
+    setEditingText(item.text || "");
+  };
+
+  const saveEdit = (id) => {
+    const value = editingText.trim();
+    if (!value) return;
+    setItems(items.map((item) => (item.id === id ? { ...item, text: value } : item)));
+    setEditingId(null);
+    setEditingText("");
+  };
+
+  const visibleItems = hideCompleted ? items.filter((item) => !item.done) : items;
 
   return (
     <Card
@@ -584,7 +626,23 @@ function TodoListCard({
           subtitle={description}
           isDark={isDark}
         />
-        <ProgressPill done={completed} total={items.length} isDark={isDark} />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <ProgressPill done={completed} total={items.length} isDark={isDark} />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setHideCompleted((prev) => !prev)}
+            className={
+              isDark
+                ? "border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#d7c19d]"
+                : "border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
+            }
+          >
+            <EyeOff className="h-3.5 w-3.5 mr-1" />
+            {hideCompleted ? "Show completed" : "Hide completed"}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex gap-2">
@@ -614,7 +672,7 @@ function TodoListCard({
         <ScrollArea className="h-[320px] pr-2">
           <div className="space-y-2">
             <AnimatePresence initial={false}>
-              {items.map((item) => (
+              {visibleItems.map((item) => (
                 <motion.div
                   key={item.id}
                   initial={{ opacity: 0, y: 8 }}
@@ -645,27 +703,79 @@ function TodoListCard({
                           }`}
                         />
                       )}
-                      <p
-                        className={`text-sm truncate ${
-                          item.done ? "line-through" : ""
-                        } ${completionTextClass(item.done, isDark)}`}
-                      >
-                        {item.text}
-                      </p>
+                      {editingId === item.id ? (
+                        <Input
+                          value={editingText}
+                          onChange={(e) => setEditingText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") saveEdit(item.id);
+                          }}
+                          className={
+                            isDark
+                              ? "h-8 bg-[#201911] border-[#4a3a25] text-[#f2e8d7]"
+                              : "h-8 bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"
+                          }
+                        />
+                      ) : (
+                        <p
+                          className={`text-sm truncate ${
+                            item.done ? "line-through" : ""
+                          } ${completionTextClass(item.done, isDark)}`}
+                        >
+                          {item.text}
+                        </p>
+                      )}
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => remove(item.id)}
-                    className={`shrink-0 ${
-                      isDark
-                        ? "text-[#ccb089] hover:bg-[#2a2118]"
-                        : "text-[#7d5c31] hover:bg-[#efe1c8]"
-                    }`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {editingId === item.id ? (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => saveEdit(item.id)}
+                          className={isDark ? "text-emerald-300 hover:bg-[#2a2118]" : "text-emerald-700 hover:bg-[#efe1c8]"}
+                          title="Save"
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setEditingId(null);
+                            setEditingText("");
+                          }}
+                          className={isDark ? "text-[#ccb089] hover:bg-[#2a2118]" : "text-[#7d5c31] hover:bg-[#efe1c8]"}
+                          title="Cancel"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => startEdit(item)}
+                        className={isDark ? "text-[#ccb089] hover:bg-[#2a2118]" : "text-[#7d5c31] hover:bg-[#efe1c8]"}
+                        title="Edit"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => remove(item.id)}
+                      className={`shrink-0 ${
+                        isDark
+                          ? "text-[#ccb089] hover:bg-[#2a2118]"
+                          : "text-[#7d5c31] hover:bg-[#efe1c8]"
+                      }`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -679,6 +789,10 @@ function TodoListCard({
 function MaterialsCard({ materials, setMaterials, isDark }) {
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [editingName, setEditingName] = useState("");
+  const [editingAmount, setEditingAmount] = useState("");
+  const [hideCompleted, setHideCompleted] = useState(false);
   const completed = useMemo(
     () => materials.filter((m) => m.done).length,
     [materials]
@@ -697,6 +811,34 @@ function MaterialsCard({ materials, setMaterials, isDark }) {
     setMaterials(materials.map((m) => (m.id === id ? { ...m, done: !m.done } : m)));
   const remove = (id) => setMaterials(materials.filter((m) => m.id !== id));
 
+  const startEdit = (material) => {
+    setEditingId(material.id);
+    setEditingName(material.name || "");
+    setEditingAmount(String(material.amount || ""));
+  };
+
+  const saveEdit = (id) => {
+    const nextName = editingName.trim();
+    const nextAmount = Number(editingAmount);
+    if (!nextName || !Number.isFinite(nextAmount) || nextAmount <= 0) return;
+
+    setMaterials(
+      materials.map((material) =>
+        material.id === id
+          ? { ...material, name: nextName, amount: nextAmount }
+          : material
+      )
+    );
+
+    setEditingId(null);
+    setEditingName("");
+    setEditingAmount("");
+  };
+
+  const visibleMaterials = hideCompleted
+    ? materials.filter((material) => !material.done)
+    : materials;
+
   return (
     <Card
       className={`rounded-2xl border shadow-lg shadow-black/10 backdrop-blur-[1px] ${
@@ -712,7 +854,23 @@ function MaterialsCard({ materials, setMaterials, isDark }) {
           subtitle="Track resource quantities needed for your next run."
           isDark={isDark}
         />
-        <ProgressPill done={completed} total={materials.length} isDark={isDark} />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <ProgressPill done={completed} total={materials.length} isDark={isDark} />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setHideCompleted((prev) => !prev)}
+            className={
+              isDark
+                ? "border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#d7c19d]"
+                : "border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
+            }
+          >
+            <EyeOff className="h-3.5 w-3.5 mr-1" />
+            {hideCompleted ? "Show completed" : "Hide completed"}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
@@ -763,7 +921,7 @@ function MaterialsCard({ materials, setMaterials, isDark }) {
         </div>
         <ScrollArea className="h-[320px] pr-2">
           <div className="space-y-2">
-            {materials.map((m) => (
+            {visibleMaterials.map((m) => (
               <div
                 key={m.id}
                 className={`flex items-center justify-between rounded-xl border p-3 ${completionRowClass(
@@ -777,31 +935,80 @@ function MaterialsCard({ materials, setMaterials, isDark }) {
                     onChange={() => toggle(m.id)}
                     isDark={isDark}
                   />
-                  <div className="min-w-0">
-                    <p
-                      className={`text-sm font-medium truncate ${
-                        m.done ? "line-through" : ""
-                      } ${completionTextClass(m.done, isDark)}`}
-                    >
-                      {m.name}
-                    </p>
-                    <p className={`text-xs ${completionSubtextClass(m.done, isDark)}`}>
-                      Need: {m.amount.toLocaleString()}
-                    </p>
-                  </div>
+                  {editingId === m.id ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+                      <Input
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        className={isDark ? "h-8 bg-[#201911] border-[#4a3a25] text-[#f2e8d7]" : "h-8 bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"}
+                      />
+                      <Input
+                        type="number"
+                        min={1}
+                        value={editingAmount}
+                        onChange={(e) => setEditingAmount(e.target.value)}
+                        className={isDark ? "h-8 bg-[#201911] border-[#4a3a25] text-[#f2e8d7]" : "h-8 bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"}
+                      />
+                    </div>
+                  ) : (
+                    <div className="min-w-0">
+                      <p
+                        className={`text-sm font-medium truncate ${
+                          m.done ? "line-through" : ""
+                        } ${completionTextClass(m.done, isDark)}`}
+                      >
+                        {m.name}
+                      </p>
+                      <p className={`text-xs ${completionSubtextClass(m.done, isDark)}`}>
+                        Need: {Number(m.amount || 0).toLocaleString()}
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => remove(m.id)}
-                  className={`shrink-0 ${
-                    isDark
-                      ? "text-[#ccb089] hover:bg-[#2a2118]"
-                      : "text-[#7d5c31] hover:bg-[#efe1c8]"
-                  }`}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1 shrink-0">
+                  {editingId === m.id ? (
+                    <>
+                      <Button variant="ghost" size="icon" onClick={() => saveEdit(m.id)} className={isDark ? "text-emerald-300 hover:bg-[#2a2118]" : "text-emerald-700 hover:bg-[#efe1c8]"} title="Save">
+                        <Check className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setEditingId(null);
+                          setEditingName("");
+                          setEditingAmount("");
+                        }}
+                        className={isDark ? "text-[#ccb089] hover:bg-[#2a2118]" : "text-[#7d5c31] hover:bg-[#efe1c8]"}
+                        title="Cancel"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => startEdit(m)}
+                      className={isDark ? "text-[#ccb089] hover:bg-[#2a2118]" : "text-[#7d5c31] hover:bg-[#efe1c8]"}
+                      title="Edit"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => remove(m.id)}
+                    className={`shrink-0 ${
+                      isDark
+                        ? "text-[#ccb089] hover:bg-[#2a2118]"
+                        : "text-[#7d5c31] hover:bg-[#efe1c8]"
+                    }`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -811,10 +1018,16 @@ function MaterialsCard({ materials, setMaterials, isDark }) {
   );
 }
 
-function ItemsCard({ items, setItems, isDark }) {
+function ItemsCard({ items, setItems, farmSources, isDark }) {
   const [name, setName] = useState("");
   const [source, setSource] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [editingName, setEditingName] = useState("");
+  const [editingSource, setEditingSource] = useState("");
+  const [hideCompleted, setHideCompleted] = useState(false);
   const completed = useMemo(() => items.filter((i) => i.done).length, [items]);
+
+  const sourceOptions = useMemo(() => normalizeFarmSources(farmSources), [farmSources]);
 
   const add = () => {
     const n = name.trim();
@@ -827,6 +1040,31 @@ function ItemsCard({ items, setItems, isDark }) {
   const toggle = (id) =>
     setItems(items.map((i) => (i.id === id ? { ...i, done: !i.done } : i)));
   const remove = (id) => setItems(items.filter((i) => i.id !== id));
+
+  const startEdit = (item) => {
+    setEditingId(item.id);
+    setEditingName(item.name || "");
+    setEditingSource(item.source || "");
+  };
+
+  const saveEdit = (id) => {
+    const nextName = editingName.trim();
+    if (!nextName) return;
+
+    setItems(
+      items.map((item) =>
+        item.id === id
+          ? { ...item, name: nextName, source: editingSource.trim() }
+          : item
+      )
+    );
+
+    setEditingId(null);
+    setEditingName("");
+    setEditingSource("");
+  };
+
+  const visibleItems = hideCompleted ? items.filter((item) => !item.done) : items;
 
   return (
     <Card
@@ -843,7 +1081,23 @@ function ItemsCard({ items, setItems, isDark }) {
           subtitle="Track gear/components and where you want to farm them."
           isDark={isDark}
         />
-        <ProgressPill done={completed} total={items.length} isDark={isDark} />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <ProgressPill done={completed} total={items.length} isDark={isDark} />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setHideCompleted((prev) => !prev)}
+            className={
+              isDark
+                ? "border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#d7c19d]"
+                : "border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
+            }
+          >
+            <EyeOff className="h-3.5 w-3.5 mr-1" />
+            {hideCompleted ? "Show completed" : "Hide completed"}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
@@ -866,16 +1120,22 @@ function ItemsCard({ items, setItems, isDark }) {
             <Label className={`text-xs ${isDark ? "text-[#ceb89a]" : "text-[#6b5636]"}`}>
               Farm Source (optional)
             </Label>
-            <Input
+            <select
               value={source}
               onChange={(e) => setSource(e.target.value)}
-              placeholder="e.g., Testing Labs / Contract"
-              className={
+              className={`flex h-9 w-full rounded-md border px-3 py-2 text-sm ${
                 isDark
                   ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]"
                   : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"
-              }
-            />
+              }`}
+            >
+              <option value="">Select a farm source...</option>
+              {sourceOptions.map((farmSource) => (
+                <option key={farmSource} value={farmSource}>
+                  {farmSource}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="sm:col-span-2 flex items-end">
             <Button
@@ -892,52 +1152,114 @@ function ItemsCard({ items, setItems, isDark }) {
         </div>
         <ScrollArea className="h-[320px] pr-2">
           <div className="space-y-2">
-            {items.map((i) => (
-              <div
-                key={i.id}
-                className={`flex items-center justify-between rounded-xl border p-3 ${completionRowClass(
-                  i.done,
-                  isDark
-                )}`}
-              >
-                <div className="flex flex-1 items-center gap-3 min-w-0">
-                  <CheckboxControl
-                    checked={i.done}
-                    onChange={() => toggle(i.id)}
-                    isDark={isDark}
-                  />
-                  <div className="min-w-0">
-                    <p
-                      className={`text-sm font-medium truncate ${
-                        i.done ? "line-through" : ""
-                      } ${completionTextClass(i.done, isDark)}`}
-                    >
-                      {i.name}
-                    </p>
-                    <p
-                      className={`text-xs truncate ${completionSubtextClass(
-                        i.done,
+            {visibleItems.map((i) => {
+              const editSourceOptions = normalizeFarmSources([...sourceOptions, i.source || ""]);
+
+              return (
+                <div
+                  key={i.id}
+                  className={`flex items-center justify-between rounded-xl border p-3 ${completionRowClass(
+                    i.done,
+                    isDark
+                  )}`}
+                >
+                  <div className="flex flex-1 items-center gap-3 min-w-0">
+                    <CheckboxControl
+                      checked={i.done}
+                      onChange={() => toggle(i.id)}
+                      isDark={isDark}
+                    />
+                    {editingId === i.id ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+                        <Input
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          className={isDark ? "h-8 bg-[#201911] border-[#4a3a25] text-[#f2e8d7]" : "h-8 bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"}
+                        />
+                        <select
+                          value={editingSource}
+                          onChange={(e) => setEditingSource(e.target.value)}
+                          className={`h-8 rounded-md border px-3 text-sm ${
+                            isDark
+                              ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]"
+                              : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"
+                          }`}
+                        >
+                          <option value="">Select a farm source...</option>
+                          {editSourceOptions.map((farmSource) => (
+                            <option key={farmSource} value={farmSource}>
+                              {farmSource}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="min-w-0">
+                        <p
+                          className={`text-sm font-medium truncate ${
+                            i.done ? "line-through" : ""
+                          } ${completionTextClass(i.done, isDark)}`}
+                        >
+                          {i.name}
+                        </p>
+                        <p
+                          className={`text-xs truncate ${completionSubtextClass(
+                            i.done,
+                            isDark
+                          )}`}
+                        >
+                          {i.source ? `Source: ${i.source}` : "No source added"}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {editingId === i.id ? (
+                      <>
+                        <Button variant="ghost" size="icon" onClick={() => saveEdit(i.id)} className={isDark ? "text-emerald-300 hover:bg-[#2a2118]" : "text-emerald-700 hover:bg-[#efe1c8]"} title="Save">
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setEditingId(null);
+                            setEditingName("");
+                            setEditingSource("");
+                          }}
+                          className={isDark ? "text-[#ccb089] hover:bg-[#2a2118]" : "text-[#7d5c31] hover:bg-[#efe1c8]"}
+                          title="Cancel"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => startEdit(i)}
+                        className={isDark ? "text-[#ccb089] hover:bg-[#2a2118]" : "text-[#7d5c31] hover:bg-[#efe1c8]"}
+                        title="Edit"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => remove(i.id)}
+                      className={`shrink-0 ${
                         isDark
-                      )}`}
+                          ? "text-[#ccb089] hover:bg-[#2a2118]"
+                          : "text-[#7d5c31] hover:bg-[#efe1c8]"
+                      }`}
                     >
-                      {i.source ? `Source: ${i.source}` : "No source added"}
-                    </p>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => remove(i.id)}
-                  className={`shrink-0 ${
-                    isDark
-                      ? "text-[#ccb089] hover:bg-[#2a2118]"
-                      : "text-[#7d5c31] hover:bg-[#efe1c8]"
-                  }`}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </ScrollArea>
       </CardContent>
@@ -2082,6 +2404,7 @@ export default function App() {
   const [sessionTodos, setSessionTodos] = useState(defaults.sessionTodos);
   const [materials, setMaterials] = useState(defaults.materials);
   const [farmItems, setFarmItems] = useState(defaults.farmItems);
+  const [farmSources, setFarmSources] = useState(defaults.farmSources);
   const [generalTodos, setGeneralTodos] = useState(defaults.generalTodos);
   const [landsraadHouses, setLandsraadHouses] = useState(defaults.landsraadHouses);
   const [houseSwatches, setHouseSwatches] = useState(defaults.houseSwatches);
@@ -2098,6 +2421,7 @@ export default function App() {
   const [locationEntriesReady, setLocationEntriesReady] = useState(false);
   const [locationEntriesError, setLocationEntriesError] = useState(null);
   const [locationUploadStateByHouse, setLocationUploadStateByHouse] = useState({});
+  const [farmSourceInput, setFarmSourceInput] = useState("");
   const [weeklyResetCountdown, setWeeklyResetCountdown] = useState(() =>
     getTimeUntilNextTuesdayMidnightEt()
   );
@@ -2146,6 +2470,7 @@ export default function App() {
       if (Array.isArray(saved.sessionTodos)) setSessionTodos(saved.sessionTodos);
       if (Array.isArray(saved.materials)) setMaterials(saved.materials);
       if (Array.isArray(saved.farmItems)) setFarmItems(saved.farmItems);
+      if (Array.isArray(saved.farmSources)) setFarmSources(normalizeFarmSources(saved.farmSources));
       if (Array.isArray(saved.generalTodos)) setGeneralTodos(saved.generalTodos);
       if (Array.isArray(saved.landsraadHouses)) {
         setLandsraadHouses(normalizeLandsraadHouses(saved.landsraadHouses));
@@ -2188,6 +2513,7 @@ export default function App() {
           }
           if (Array.isArray(s.materials)) setMaterials(s.materials);
           if (Array.isArray(s.farmItems)) setFarmItems(s.farmItems);
+          if (Array.isArray(s.farmSources)) setFarmSources(normalizeFarmSources(s.farmSources));
           if (Array.isArray(s.generalTodos)) setGeneralTodos(s.generalTodos);
           if (Array.isArray(s.landsraadHouses)) {
             setLandsraadHouses(normalizeLandsraadHouses(s.landsraadHouses));
@@ -2203,6 +2529,7 @@ export default function App() {
               themeMode,
               materials,
               farmItems,
+              farmSources,
               generalTodos,
               landsraadHouses,
               houseSwatches,
@@ -2280,7 +2607,7 @@ export default function App() {
       try {
         const { data, error } = await supabase
           .from("landsraad_location_content")
-          .select("entries")
+          .select("entries,farm_sources")
           .eq("key", LOCATION_CONTENT_KEY)
           .maybeSingle();
 
@@ -2289,17 +2616,21 @@ export default function App() {
 
         if (data?.entries && typeof data.entries === "object") {
           setLocationEntries(normalizeHouseLocationEntries(data.entries));
+          setFarmSources(normalizeFarmSources(data.farm_sources));
         } else {
           const seededEntries = makeDefaultHouseLocationEntries();
+          const seededFarmSources = normalizeFarmSources(defaults.farmSources);
           await supabase.from("landsraad_location_content").upsert(
             {
               key: LOCATION_CONTENT_KEY,
               entries: seededEntries,
+              farm_sources: seededFarmSources,
               updated_at: new Date().toISOString(),
             },
             { onConflict: "key" }
           );
           setLocationEntries(seededEntries);
+          setFarmSources(seededFarmSources);
         }
 
         setLocationEntriesReady(true);
@@ -2326,6 +2657,7 @@ export default function App() {
         themeMode,
         materials,
         farmItems,
+        farmSources,
         generalTodos,
         landsraadHouses,
         houseSwatches,
@@ -2338,6 +2670,7 @@ export default function App() {
     themeMode,
     materials,
     farmItems,
+    farmSources,
     generalTodos,
     landsraadHouses,
     houseSwatches,
@@ -2383,6 +2716,7 @@ export default function App() {
             themeMode,
             materials,
             farmItems,
+            farmSources,
             generalTodos,
             landsraadHouses,
             houseSwatches,
@@ -2409,6 +2743,7 @@ export default function App() {
     themeMode,
     materials,
     farmItems,
+    farmSources,
     generalTodos,
     landsraadHouses,
     houseSwatches,
@@ -2449,6 +2784,7 @@ export default function App() {
           {
             key: LOCATION_CONTENT_KEY,
             entries: locationEntries,
+            farm_sources: normalizeFarmSources(farmSources),
             updated_at: new Date().toISOString(),
           },
           { onConflict: "key" }
@@ -2461,7 +2797,7 @@ export default function App() {
     }, 500);
 
     return () => clearTimeout(t);
-  }, [session?.user?.id, hydrated, locationEntriesReady, locationEntries]);
+  }, [session?.user?.id, hydrated, locationEntriesReady, locationEntries, farmSources]);
 
   const exportBackup = () => {
     if (typeof window === "undefined") return;
@@ -2474,6 +2810,7 @@ export default function App() {
         themeMode,
         materials,
         farmItems,
+        farmSources,
         generalTodos,
         landsraadHouses,
         houseSwatches,
@@ -2508,6 +2845,7 @@ export default function App() {
       }
       if (Array.isArray(d.materials)) setMaterials(d.materials);
       if (Array.isArray(d.farmItems)) setFarmItems(d.farmItems);
+      if (Array.isArray(d.farmSources)) setFarmSources(normalizeFarmSources(d.farmSources));
       if (Array.isArray(d.generalTodos)) setGeneralTodos(d.generalTodos);
       if (Array.isArray(d.landsraadHouses)) {
         setLandsraadHouses(normalizeLandsraadHouses(d.landsraadHouses));
@@ -2533,6 +2871,24 @@ export default function App() {
         notes,
       },
     }));
+  };
+
+
+  const addFarmSource = () => {
+    const nextSource = farmSourceInput.trim();
+    if (!nextSource) return;
+
+    setFarmSources((prev) => normalizeFarmSources([...prev, nextSource]));
+    setFarmSourceInput("");
+  };
+
+  const removeFarmSource = (sourceToRemove) => {
+    setFarmSources((prev) => prev.filter((source) => source !== sourceToRemove));
+    setFarmItems((prev) =>
+      prev.map((item) =>
+        item.source === sourceToRemove ? { ...item, source: "" } : item
+      )
+    );
   };
 
   const uploadLocationImage = async (houseName, file) => {
@@ -2770,7 +3126,7 @@ export default function App() {
           </TabsContent>
 
           <TabsContent value="items">
-            <ItemsCard items={farmItems} setItems={setFarmItems} isDark={isDark} />
+            <ItemsCard items={farmItems} setItems={setFarmItems} farmSources={farmSources} isDark={isDark} />
           </TabsContent>
 
           <TabsContent value="landsraad">
@@ -2981,6 +3337,64 @@ export default function App() {
                 Sync warning: {locationEntriesError}
               </p>
             ) : null}
+
+            <div
+              className={`mt-4 rounded-lg border p-3 ${
+                isDark ? "border-[#4a3a25] bg-[#211910]" : "border-[#d8bc91] bg-[#fff3df]"
+              }`}
+            >
+              <p className="text-sm font-semibold">Farm Source Options</p>
+              <p className={`mt-1 text-xs ${isDark ? "text-[#c8bca7]" : "text-[#7a6342]"}`}>
+                Add or remove shared Farm Source dropdown values used in Items to Farm.
+              </p>
+              <div className="mt-2 flex gap-2">
+                <Input
+                  value={farmSourceInput}
+                  onChange={(e) => setFarmSourceInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addFarmSource()}
+                  placeholder="e.g., Testing Labs"
+                  className={
+                    isDark
+                      ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]"
+                      : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"
+                  }
+                />
+                <Button
+                  type="button"
+                  onClick={addFarmSource}
+                  className={
+                    isDark
+                      ? "gap-2 bg-[#c48a3a] hover:bg-[#d59a48] text-[#1a1208]"
+                      : "gap-2 bg-[#a56b2c] hover:bg-[#8d5821] text-[#fff4de]"
+                  }
+                >
+                  <Plus className="h-4 w-4" /> Add
+                </Button>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {normalizeFarmSources(farmSources).map((source) => (
+                  <Badge
+                    key={source}
+                    className={`flex items-center gap-1 ${
+                      isDark
+                        ? "bg-[#2a2118] text-[#e7d7bc] border border-[#4a3a25]"
+                        : "bg-[#efe1c8] text-[#5a4528] border border-[#c9a878]"
+                    }`}
+                  >
+                    <span>{source}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeFarmSource(source)}
+                      className="rounded p-0.5"
+                      title={`Remove ${source}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            </div>
 
             <div className="mt-4 space-y-3">
               {ALL_LANDSRAAD_HOUSES.map((houseName) => {
