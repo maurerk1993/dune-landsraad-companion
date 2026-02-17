@@ -1049,6 +1049,8 @@ function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedO
     );
   };
 
+  const trackedRoute = sortedHouses.filter((house) => house.pinned);
+
   return (
     <div className="space-y-4">
       <Card
@@ -2555,6 +2557,9 @@ export default function App() {
             <TabsTrigger value="general" className={`rounded-xl gap-2 ${isMobile ? "shrink-0" : ""}`}>
               <ListTodo className="h-4 w-4" /> General To-Do
             </TabsTrigger>
+            <TabsTrigger value="dune-tools" className={`rounded-xl gap-2 ${isMobile ? "shrink-0" : ""}`}>
+              <Wrench className="h-4 w-4" /> Dune Tools
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="coop">
@@ -2610,6 +2615,31 @@ export default function App() {
           </TabsContent>
 
         </Tabs>
+        )}
+      </div>
+
+      <div className="fixed bottom-3 right-4 flex flex-col items-end gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setShowChangeNotes(true)}
+          className={
+            isDark
+              ? "h-7 px-2 text-[11px] border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#d7c19d]"
+              : "h-7 px-2 text-[11px] border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
+          }
+        >
+          Change Notes
+        </Button>
+
+        <div
+          className={`text-xs font-medium tracking-wide ${
+            isDark ? "text-[#8f7652]" : "text-[#7e6440]"
+          }`}
+        >
+          v{APP_VERSION}
+        </div>
       </div>
 
       <div className="fixed bottom-3 right-4 flex flex-col items-end gap-2">
