@@ -36,7 +36,7 @@ function uid() {
 
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "2.2.0";
+const APP_VERSION = "2.3.0";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -1132,12 +1132,8 @@ function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedO
             )}
           </div>
 
-          <ScrollArea
-            className={`pr-2 ${
-              isMobile ? "h-[54vh] min-h-[360px]" : "h-[calc(100vh-17rem)] min-h-[620px]"
-            }`}
-          >
-            <div className="space-y-3">
+          {isMobile ? (
+            <div className="space-y-3 pr-1">
               {visibleHouses.map((h) => {
                 const doneCount = h.goals.filter((g) => g.done).length;
 
@@ -1340,7 +1336,213 @@ function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedO
                 </div>
               ) : null}
             </div>
-          </ScrollArea>
+          ) : (
+            <ScrollArea className="h-[calc(100vh-17rem)] min-h-[620px] pr-2">
+              <div className="space-y-3">
+                {visibleHouses.map((h) => {
+                  const doneCount = h.goals.filter((g) => g.done).length;
+
+                  return (
+                    <div
+                      key={h.id}
+                      className={`rounded-xl border p-3 space-y-3 ${
+                        isDark ? "bg-[#1a140f] border-[#3b2d1f]" : "bg-[#fffaf0] border-[#dcc39b]"
+                      }`}
+                    >
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                          <Shield
+                            className={`h-4 w-4 ${isDark ? "text-emerald-400" : "text-emerald-700"}`}
+                          />
+                          <p
+                            className={`font-semibold truncate ${
+                              isDark ? "text-[#f2e7d5]" : "text-[#3f2f1a]"
+                            }`}
+                          >
+                            {h.name}
+                          </p>
+
+                          {h.pinned && (
+                            <Badge
+                              className={
+                                isDark
+                                  ? "bg-[#2b3f2e] text-[#bcf0c9] border border-emerald-600"
+                                  : "bg-emerald-100 text-emerald-800 border border-emerald-500"
+                              }
+                            >
+                              Tracked
+                            </Badge>
+                          )}
+
+                          <Badge
+                            className={
+                              isDark
+                                ? "bg-[#2a2118] text-[#e7d7bc] border border-[#4a3a25]"
+                                : "bg-[#efe1c8] text-[#5a4528] border border-[#c9a878]"
+                            }
+                          >
+                            Goals: {doneCount}/{h.goals.length}
+                          </Badge>
+
+                          <Badge
+                            className={
+                              isDark
+                                ? "bg-emerald-950/40 text-emerald-300 border border-emerald-800"
+                                : "bg-emerald-50 text-emerald-800 border border-emerald-400"
+                            }
+                          >
+                            Map: {houseMapLabel(h.name)}
+                          </Badge>
+
+                          <a
+                            href={`${METHOD_LANDSRAAD_BASE_URL}#${houseAnchorSlug(h.name)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`inline-flex items-center rounded-md h-7 px-2 text-sm transition-colors cursor-pointer underline-offset-2 hover:underline ${
+                              isDark ? "text-[#ccb089] hover:bg-[#2a2118]" : "text-[#7d5c31] hover:bg-[#efe1c8]"
+                            }`}
+                          >
+                            View location
+                          </a>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => togglePinned(h.id)}
+                            className={`border ${
+                              h.pinned
+                                ? isDark
+                                  ? "border-emerald-400 bg-emerald-900/40 text-emerald-200 hover:bg-emerald-800/50"
+                                  : "border-emerald-600 bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                                : isDark
+                                  ? "border-[#5a462c] bg-[#1f1710] text-[#e6d0ac] hover:bg-[#2a2118]"
+                                  : "border-[#c9a878] bg-[#f7ead2] text-[#7d5c31] hover:bg-[#efe1c8]"
+                            }`}
+                          >
+                            {h.pinned ? "Tracked" : "Track"}
+                          </Button>
+
+                          <Label className={`text-xs ${isDark ? "text-[#ceb89a]" : "text-[#6b5636]"}`}>
+                            Current
+                          </Label>
+
+                          <Input
+                            type="number"
+                            min={0}
+                            value={h.current}
+                            onChange={(e) => updateCurrent(h.id, e.target.value)}
+                            className={`w-24 h-8 ${
+                              isDark ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]" : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"
+                            }`}
+                          />
+
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        {h.goals.map((g) => {
+                          const currentAmount = Number(h.current) || 0;
+                          const remaining = Math.max(g.required - currentAmount, 0);
+                          const projectedPct = g.required > 0 ? Math.min(100, Math.round((currentAmount / g.required) * 100)) : 0;
+
+                          return (
+                            <div
+                              key={g.id}
+                              className={`flex items-center justify-between rounded-lg border p-2 ${completionRowClass(
+                                g.done,
+                                isDark
+                              )}`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <CheckboxControl
+                                  checked={g.done}
+                                  onChange={() => toggleGoal(h.id, g.id)}
+                                  isDark={isDark}
+                                />
+                                <Trophy
+                                  className={`h-4 w-4 ${
+                                    g.done
+                                      ? isDark
+                                        ? "text-emerald-400"
+                                        : "text-emerald-700"
+                                      : isDark
+                                        ? "text-[#d5b277]"
+                                        : "text-[#8a632f]"
+                                  }`}
+                                />
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <p
+                                      className={`text-sm truncate ${
+                                        g.done ? "line-through" : ""
+                                      } ${completionTextClass(g.done, isDark)}`}
+                                    >
+                                      {g.name}
+                                    </p>
+                                    {g.done && (
+                                      <Badge
+                                        className={
+                                          isDark
+                                            ? "bg-emerald-900/40 text-emerald-300 border border-emerald-700"
+                                            : "bg-emerald-100 text-emerald-800 border border-emerald-400"
+                                        }
+                                      >
+                                        Turned in
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className={`text-xs ${completionSubtextClass(g.done, isDark)}`}>
+                                    Requires: {g.required.toLocaleString()} • Remaining: {remaining.toLocaleString()} • Projection: {projectedPct}%
+                                  </p>
+                                </div>
+                              </div>
+
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeGoal(h.id, g.id)}
+                                className={
+                                  isDark ? "text-[#ccb089] hover:bg-[#2a2118]" : "text-[#7d5c31] hover:bg-[#efe1c8]"
+                                }
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          );
+                        })}
+
+                        {h.goals.length === 0 && (
+                          <div
+                            className={`rounded-lg border border-dashed p-3 text-xs ${
+                              isDark
+                                ? "border-[#4a3a25] text-[#a79274]"
+                                : "border-[#caa779] text-[#7a6342]"
+                            }`}
+                          >
+                            No reward goals yet for this house.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {visibleHouses.length === 0 ? (
+                  <div
+                    className={`rounded-lg border border-dashed p-3 text-xs ${
+                      isDark
+                        ? "border-[#4a3a25] text-[#a79274]"
+                        : "border-[#caa779] text-[#7a6342]"
+                    }`}
+                  >
+                    No houses match the current filter.
+                  </div>
+                ) : null}
+              </div>
+            </ScrollArea>
+          )}
         </CardContent>
       </Card>
 
