@@ -1072,6 +1072,8 @@ function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedO
     );
   };
 
+  const trackedRoute = sortedHouses.filter((house) => house.pinned);
+
   return (
     <div className="space-y-4">
       <Card
@@ -2659,6 +2661,9 @@ export default function App() {
             </TabsTrigger>
             <TabsTrigger value="general" className={`rounded-xl gap-2 ${isMobile ? "shrink-0" : ""}`}>
               <ListTodo className="h-4 w-4" /> General To-Do
+            </TabsTrigger>
+            <TabsTrigger value="dune-tools" className={`rounded-xl gap-2 ${isMobile ? "shrink-0" : ""}`}>
+              <Wrench className="h-4 w-4" /> Dune Tools
             </TabsTrigger>
           </TabsList>
 
