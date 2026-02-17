@@ -1936,13 +1936,28 @@ function HouseSwatchesCard({ swatches, setSwatches, isDark }) {
   );
 }
 
-function DuneToolsCard({ isDark }) {
+function DuneToolsCard({ isDark, onBack }) {
   return (
-    <Card
-      className={`rounded-2xl border shadow-lg shadow-black/10 backdrop-blur-[1px] ${
-        isDark ? "bg-[#16120e] border-[#3e3122]" : "bg-[#fff9ef] border-[#d8bc91]"
-      }`}
-    >
+    <div className="space-y-3">
+      <div>
+        <Button
+          variant="outline"
+          onClick={onBack}
+          className={
+            isDark
+              ? "border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#e6d0ac]"
+              : "border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
+          }
+        >
+          Back to Companion
+        </Button>
+      </div>
+
+      <Card
+        className={`rounded-2xl border shadow-lg shadow-black/10 backdrop-blur-[1px] ${
+          isDark ? "bg-[#16120e] border-[#3e3122]" : "bg-[#fff9ef] border-[#d8bc91]"
+        }`}
+      >
       <CardHeader className="space-y-3">
         <SectionHeader
           icon={Wrench}
@@ -1981,7 +1996,8 @@ function DuneToolsCard({ isDark }) {
           ))}
         </div>
       </CardContent>
-    </Card>
+      </Card>
+    </div>
   );
 }
 
@@ -2160,6 +2176,7 @@ export default function App() {
   const [lastSharedTodosError, setLastSharedTodosError] = useState(null);
   const [showChangeNotes, setShowChangeNotes] = useState(false);
   const [activeTab, setActiveTab] = useState("landsraad");
+  const [showDuneToolsPage, setShowDuneToolsPage] = useState(false);
   const [weeklyResetCountdown, setWeeklyResetCountdown] = useState(() =>
     getTimeUntilNextTuesdayMidnightEt()
   );
@@ -2511,7 +2528,7 @@ export default function App() {
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => setActiveTab("dune-tools")}
+                  onClick={() => setShowDuneToolsPage(true)}
                   className={`inline-flex items-center rounded-md h-9 px-3 text-sm border ${
                     isDark
                       ? "border-[#5a462c] text-[#e6d0ac] hover:bg-[#2a2118]"
@@ -2601,6 +2618,9 @@ export default function App() {
           </div>
         </motion.div>
 
+        {showDuneToolsPage ? (
+          <DuneToolsCard isDark={isDark} onBack={() => setShowDuneToolsPage(false)} />
+        ) : (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList
             className={`${
@@ -2692,10 +2712,8 @@ export default function App() {
             />
           </TabsContent>
 
-          <TabsContent value="dune-tools">
-            <DuneToolsCard isDark={isDark} />
-          </TabsContent>
         </Tabs>
+        )}
       </div>
 
       <div className="fixed bottom-3 right-4 flex flex-col items-end gap-2">
