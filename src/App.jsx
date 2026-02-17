@@ -36,7 +36,7 @@ function uid() {
 
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "2.0.0";
+const APP_VERSION = "2.2.0";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -197,6 +197,26 @@ function formatCountdown(ms) {
   return `${days}d ${hours}h ${minutes}m ${seconds}s`;
 }
 
+function useIsMobile(breakpointPx = 768) {
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia(`(max-width: ${breakpointPx}px)`).matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const mediaQuery = window.matchMedia(`(max-width: ${breakpointPx}px)`);
+    const sync = (event) => setIsMobile(event.matches);
+
+    mediaQuery.addEventListener("change", sync);
+
+    return () => mediaQuery.removeEventListener("change", sync);
+  }, [breakpointPx]);
+
+  return isMobile;
+}
+
 
 const ALL_LANDSRAAD_HOUSES = [
   "House Alexin",
@@ -272,6 +292,14 @@ function makeDefaultHouseSwatches() {
     text: `${houseName} Placeable Swatch`,
     done: false,
   }));
+}
+
+function isDefaultHouseSwatchText(text) {
+  if (!text) return false;
+  const normalizedText = String(text).trim().toLowerCase();
+  return ALL_LANDSRAAD_HOUSES.some(
+    (houseName) => `${houseName} Placeable Swatch`.toLowerCase() === normalizedText
+  );
 }
 
 function normalizeHouseSwatches(swatches = []) {
@@ -822,7 +850,7 @@ function ItemsCard({ items, setItems, isDark }) {
   );
 }
 
-function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedOnlyMode }) {
+function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedOnlyMode, isMobile }) {
   const [rewardName, setRewardName] = useState("");
   const [requiredAmount, setRequiredAmount] = useState("");
   const [targetHouseId, setTargetHouseId] = useState("");
@@ -840,6 +868,8 @@ function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedO
     if (a.pinned === b.pinned) return a.name.localeCompare(b.name);
     return a.pinned ? -1 : 1;
   });
+
+  const alphabeticalHouses = [...houses].sort((a, b) => a.name.localeCompare(b.name));
 
   const searchedHouses = sortedHouses.filter((house) =>
     house.name.toLowerCase().includes(houseSearch.trim().toLowerCase())
@@ -966,7 +996,7 @@ function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedO
             />
           </div>
 
-          <div className="flex flex-wrap justify-between gap-2">
+          <div className={`flex gap-2 ${isMobile ? "flex-col" : "flex-wrap justify-between"}`}>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -1013,7 +1043,7 @@ function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedO
                 }`}
               >
                 <option value="">Select house</option>
-                {sortedHouses.map((house) => (
+                {alphabeticalHouses.map((house) => (
                   <option key={house.id} value={house.id}>
                     {house.name}
                   </option>
@@ -1102,7 +1132,11 @@ function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedO
             )}
           </div>
 
-          <ScrollArea className="h-[calc(100vh-17rem)] min-h-[620px] pr-2">
+          <ScrollArea
+            className={`pr-2 ${
+              isMobile ? "h-[54vh] min-h-[360px]" : "h-[calc(100vh-17rem)] min-h-[620px]"
+            }`}
+          >
             <div className="space-y-3">
               {visibleHouses.map((h) => {
                 const doneCount = h.goals.filter((g) => g.done).length;
@@ -1480,7 +1514,10 @@ function HouseSwatchesCard({ swatches, setSwatches, isDark }) {
 
         <ScrollArea className="h-[320px] pr-2">
           <div className="space-y-2">
-            {visibleSwatches.map((s) => (
+            {visibleSwatches.map((s) => {
+              const isCustomSwatch = !isDefaultHouseSwatchText(s.text);
+
+              return (
               <div
                 key={s.id}
                 className={`flex items-center justify-between rounded-xl border p-3 ${completionRowClass(
@@ -1502,20 +1539,34 @@ function HouseSwatchesCard({ swatches, setSwatches, isDark }) {
                     {s.text}
                   </p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeSwatch(s.id)}
-                  className={
-                    isDark
-                      ? "text-[#ccb089] hover:bg-[#2a2118]"
-                      : "text-[#7d5c31] hover:bg-[#efe1c8]"
-                  }
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {isCustomSwatch ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeSwatch(s.id)}
+                    className={
+                      isDark
+                        ? "text-[#ccb089] hover:bg-[#2a2118]"
+                        : "text-[#7d5c31] hover:bg-[#efe1c8]"
+                    }
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Badge
+                    variant="secondary"
+                    className={
+                      isDark
+                        ? "bg-[#2a2118] text-[#b8a58a] border border-[#4a3a25]"
+                        : "bg-[#efe1c8] text-[#7b6342] border border-[#d8bc91]"
+                    }
+                  >
+                    Core
+                  </Badge>
+                )}
               </div>
-            ))}
+              );
+            })}
             {visibleSwatches.length === 0 ? (
               <div
                 className={`rounded-xl border p-3 text-sm ${
@@ -1681,6 +1732,7 @@ function AuthGate({ onSignedIn, isDark }) {
 
 export default function App() {
   const fileInputRef = useRef(null);
+  const isMobile = useIsMobile();
 
   const defaults = makeDefaultState();
 
@@ -2104,26 +2156,30 @@ export default function App() {
 
         <Tabs defaultValue="coop" className="space-y-4">
           <TabsList
-            className={`grid grid-cols-2 md:grid-cols-6 gap-2 h-auto rounded-2xl p-1.5 border shadow-lg backdrop-blur-sm ${
+            className={`${
+              isMobile
+                ? "flex overflow-x-auto whitespace-nowrap"
+                : "grid grid-cols-2 md:grid-cols-6"
+            } gap-2 h-auto rounded-2xl p-1.5 border shadow-lg backdrop-blur-sm ${
               isDark ? "bg-[#18130e]/85 border-[#5a452a] shadow-[#00000066]" : "bg-[#fff3dc]/95 border-[#c9a878] shadow-[#9b7a4555]"
             }`}
           >
-            <TabsTrigger value="coop" className="rounded-xl gap-2">
+            <TabsTrigger value="coop" className={`rounded-xl gap-2 ${isMobile ? "shrink-0" : ""}`}>
               <ListTodo className="h-4 w-4" /> Session To-Do
             </TabsTrigger>
-            <TabsTrigger value="materials" className="rounded-xl gap-2">
+            <TabsTrigger value="materials" className={`rounded-xl gap-2 ${isMobile ? "shrink-0" : ""}`}>
               <Package className="h-4 w-4" /> Materials
             </TabsTrigger>
-            <TabsTrigger value="items" className="rounded-xl gap-2">
+            <TabsTrigger value="items" className={`rounded-xl gap-2 ${isMobile ? "shrink-0" : ""}`}>
               <Pickaxe className="h-4 w-4" /> Items to Farm
             </TabsTrigger>
-            <TabsTrigger value="landsraad" className="rounded-xl gap-2">
+            <TabsTrigger value="landsraad" className={`rounded-xl gap-2 ${isMobile ? "shrink-0" : ""}`}>
               <Landmark className="h-4 w-4" /> Landsraad
             </TabsTrigger>
-            <TabsTrigger value="swatches" className="rounded-xl gap-2">
+            <TabsTrigger value="swatches" className={`rounded-xl gap-2 ${isMobile ? "shrink-0" : ""}`}>
               <Shield className="h-4 w-4" /> Swatches
             </TabsTrigger>
-            <TabsTrigger value="general" className="rounded-xl gap-2">
+            <TabsTrigger value="general" className={`rounded-xl gap-2 ${isMobile ? "shrink-0" : ""}`}>
               <ListTodo className="h-4 w-4" /> General To-Do
             </TabsTrigger>
           </TabsList>
@@ -2153,6 +2209,7 @@ export default function App() {
               houses={landsraadHouses}
               setHouses={setLandsraadHouses}
               isDark={isDark}
+              isMobile={isMobile}
               trackedOnlyMode={trackedOnlyMode}
               setTrackedOnlyMode={setTrackedOnlyMode}
             />
