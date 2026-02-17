@@ -38,8 +38,7 @@ function uid() {
 
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const SHARED_TODOS_CACHE_KEY = "dune_landsraad_shared_todos_cache_v1";
-const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "3.2.0";
+const APP_VERSION = "3.6.0";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -55,6 +54,32 @@ const WEEKDAY_INDEX = {
 };
 
 const APP_CHANGE_NOTES = [
+  {
+    version: "3.6.0",
+    notes: [
+      "Added defensive Supabase client fallback so missing deploy env vars no longer crash to a blank page.",
+    ],
+  },
+  {
+    version: "3.5.0",
+    notes: [
+      "Removed Dune Tools entry from the header UI to avoid nav confusion after deployment.",
+    ],
+  },
+  {
+    version: "3.4.0",
+    notes: [
+      "Removed Dune Tools from tab navigation and kept it only as a separate header-button page.",
+      "Added this version bump to ensure deployments clearly pick up the nav-bar removal fix.",
+    ],
+  },
+  {
+    version: "3.3.0",
+    notes: [
+      "Replaced header backup actions with a Dune Tools button and new tools page.",
+      "Added quick-launch tool tiles for database, maps, base calculator, and server status.",
+    ],
+  },
   {
     version: "3.2.0",
     notes: [
@@ -2051,7 +2076,6 @@ function AuthGate({ onSignedIn, isDark, isAtreides, isSpice }) {
 }
 
 export default function App() {
-  const fileInputRef = useRef(null);
   const isMobile = useIsMobile();
 
   const defaults = makeDefaultState();
@@ -2076,6 +2100,7 @@ export default function App() {
   const [sharedTodosReady, setSharedTodosReady] = useState(false);
   const [lastSharedTodosError, setLastSharedTodosError] = useState(null);
   const [showChangeNotes, setShowChangeNotes] = useState(false);
+  const [activeTab, setActiveTab] = useState("landsraad");
   const [weeklyResetCountdown, setWeeklyResetCountdown] = useState(() =>
     getTimeUntilNextTuesdayMidnightEt()
   );
@@ -2370,63 +2395,6 @@ export default function App() {
     return () => clearTimeout(t);
   }, [session?.user?.id, hydrated, sharedTodosReady, sessionTodos]);
 
-  const exportBackup = () => {
-    if (typeof window === "undefined") return;
-    const payload = {
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      app: "Dune Awakening: Landsraad Companion",
-      data: {
-        isDark,
-        themeMode,
-        materials,
-        farmItems,
-        generalTodos,
-        landsraadHouses,
-        houseSwatches,
-        trackedOnlyMode,
-      },
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${BACKUP_FILENAME_PREFIX}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  };
-
-  const importBackupFromFile = (file) => {
-    if (!file || typeof window === "undefined") return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const parsed = safeParse(String(e.target?.result || ""), null);
-      const d = parsed?.data && typeof parsed.data === "object" ? parsed.data : parsed;
-      if (!d || typeof d !== "object") return window.alert("Invalid backup file format.");
-
-      if (typeof d.themeMode === "string") {
-        setThemeMode(d.themeMode);
-      } else if (typeof d.isDark === "boolean") {
-        setThemeMode(d.isDark ? "dark" : "light");
-      }
-      if (Array.isArray(d.materials)) setMaterials(d.materials);
-      if (Array.isArray(d.farmItems)) setFarmItems(d.farmItems);
-      if (Array.isArray(d.generalTodos)) setGeneralTodos(d.generalTodos);
-      if (Array.isArray(d.landsraadHouses)) {
-        setLandsraadHouses(normalizeLandsraadHouses(d.landsraadHouses));
-      }
-      if (Array.isArray(d.houseSwatches)) setHouseSwatches(normalizeHouseSwatches(d.houseSwatches));
-      if (typeof d.trackedOnlyMode === "boolean") setTrackedOnlyMode(d.trackedOnlyMode);
-
-      window.alert("Backup imported successfully.");
-    };
-    reader.readAsText(file);
-  };
-
   const signOut = async () => {
     await supabase.auth.signOut();
     setSession(null);
@@ -2561,7 +2529,7 @@ export default function App() {
           </div>
         </motion.div>
 
-        <Tabs defaultValue="landsraad" className="space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList
             className={`${
               isMobile
