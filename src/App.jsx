@@ -29,8 +29,6 @@ import {
   Loader2,
   Search,
   X,
-  ExternalLink,
-  Wrench,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -40,7 +38,7 @@ function uid() {
 
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const SHARED_TODOS_CACHE_KEY = "dune_landsraad_shared_todos_cache_v1";
-const APP_VERSION = "3.4.0";
+const APP_VERSION = "3.5.0";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -56,6 +54,12 @@ const WEEKDAY_INDEX = {
 };
 
 const APP_CHANGE_NOTES = [
+  {
+    version: "3.5.0",
+    notes: [
+      "Removed Dune Tools entry from the header UI to avoid nav confusion after deployment.",
+    ],
+  },
   {
     version: "3.4.0",
     notes: [
@@ -148,33 +152,6 @@ const APP_CHANGE_NOTES = [
   {
     version: "1.7.0",
     notes: ["Added subtle spice-inspired purple/red ambient accents to dark mode."],
-  },
-];
-
-const DUNE_TOOLS_LINKS = [
-  {
-    id: "dune-gaming-tools",
-    name: "Dune Gaming Tools",
-    description: "Dune item database and drop locations.",
-    href: "https://dune.gaming.tools/items",
-  },
-  {
-    id: "method-dd-companion",
-    name: "Method.gg",
-    description: "Best DD map, DD and overland labs drop tables.",
-    href: "https://www.method.gg/dune-awakening/deep-desert-companion",
-  },
-  {
-    id: "dune-base-calculator",
-    name: "Dune Base Calculator",
-    description: "Plan and optimize your base setups.",
-    href: "https://tools.tcno.co/dune",
-  },
-  {
-    id: "dune-server-status-andioyu",
-    name: "Dune Server Status: Andioyu",
-    description: "Check current Andioyu world status.",
-    href: "https://dunestatus.com/worlds/andioyu",
   },
 ];
 
@@ -1943,71 +1920,6 @@ function HouseSwatchesCard({ swatches, setSwatches, isDark }) {
   );
 }
 
-function DuneToolsCard({ isDark, onBack }) {
-  return (
-    <div className="space-y-3">
-      <div>
-        <Button
-          variant="outline"
-          onClick={onBack}
-          className={
-            isDark
-              ? "border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#e6d0ac]"
-              : "border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
-          }
-        >
-          Back to Companion
-        </Button>
-      </div>
-
-      <Card
-        className={`rounded-2xl border shadow-lg shadow-black/10 backdrop-blur-[1px] ${
-          isDark ? "bg-[#16120e] border-[#3e3122]" : "bg-[#fff9ef] border-[#d8bc91]"
-        }`}
-      >
-      <CardHeader className="space-y-3">
-        <SectionHeader
-          icon={Wrench}
-          title="Dune Tools"
-          subtitle="Quick-launch links for planning, mapping, and server checks."
-          isDark={isDark}
-        />
-      </CardHeader>
-
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {DUNE_TOOLS_LINKS.map((tool) => (
-            <a
-              key={tool.id}
-              href={tool.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`rounded-xl border p-4 transition-colors ${
-                isDark
-                  ? "bg-[#1b1510] border-[#4a3a25] hover:bg-[#241c14]"
-                  : "bg-[#fff7e8] border-[#d8bc91] hover:bg-[#f5e6cd]"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className={`text-sm font-semibold ${isDark ? "text-[#f2e7d5]" : "text-[#3a2b17]"}`}>
-                    {tool.name}
-                  </p>
-                  <p className={`mt-1 text-xs ${isDark ? "text-[#c8bca7]" : "text-[#6b5636]"}`}>
-                    {tool.description}
-                  </p>
-                </div>
-                <ExternalLink className={`h-4 w-4 shrink-0 ${isDark ? "text-[#ccb089]" : "text-[#7d5c31]"}`} />
-              </div>
-            </a>
-          ))}
-        </div>
-      </CardContent>
-      </Card>
-    </div>
-  );
-}
-
 function AuthGate({ onSignedIn, isDark, isAtreides, isSpice }) {
   const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
@@ -2183,7 +2095,6 @@ export default function App() {
   const [lastSharedTodosError, setLastSharedTodosError] = useState(null);
   const [showChangeNotes, setShowChangeNotes] = useState(false);
   const [activeTab, setActiveTab] = useState("landsraad");
-  const [showDuneToolsPage, setShowDuneToolsPage] = useState(false);
   const [weeklyResetCountdown, setWeeklyResetCountdown] = useState(() =>
     getTimeUntilNextTuesdayMidnightEt()
   );
@@ -2532,19 +2443,6 @@ export default function App() {
                 Command center for Great House goals, weekly strategy, and Landsraad cycle planning.
               </p>
 
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowDuneToolsPage(true)}
-                  className={`inline-flex items-center rounded-md h-9 px-3 text-sm border ${
-                    isDark
-                      ? "border-[#5a462c] text-[#e6d0ac] hover:bg-[#2a2118]"
-                      : "border-[#c9a878] text-[#6d4f27] hover:bg-[#efdfc2]"
-                  }`}
-                >
-                  Dune Tools
-                </button>
-              </div>
             </div>
 
             <div className="flex flex-col items-start md:items-end gap-2">
@@ -2625,9 +2523,6 @@ export default function App() {
           </div>
         </motion.div>
 
-        {showDuneToolsPage ? (
-          <DuneToolsCard isDark={isDark} onBack={() => setShowDuneToolsPage(false)} />
-        ) : (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList
             className={`${
@@ -2721,6 +2616,30 @@ export default function App() {
 
         </Tabs>
         )}
+      </div>
+
+      <div className="fixed bottom-3 right-4 flex flex-col items-end gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setShowChangeNotes(true)}
+          className={
+            isDark
+              ? "h-7 px-2 text-[11px] border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#d7c19d]"
+              : "h-7 px-2 text-[11px] border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
+          }
+        >
+          Change Notes
+        </Button>
+
+        <div
+          className={`text-xs font-medium tracking-wide ${
+            isDark ? "text-[#8f7652]" : "text-[#7e6440]"
+          }`}
+        >
+          v{APP_VERSION}
+        </div>
       </div>
 
       <div className="fixed bottom-3 right-4 flex flex-col items-end gap-2">
