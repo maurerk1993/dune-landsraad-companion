@@ -1,0 +1,16 @@
+{
+  "name": "Landsraad Companion",
+  "short_name": "Landsraad",
+  "description": "Dune Awakening Landsraad Companion",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#e8b66d",
+  "theme_color": "#c67f3c",
+  "icons": [
+    {
+      "src": "/sand-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
