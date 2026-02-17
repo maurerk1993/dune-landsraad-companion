@@ -14,7 +14,6 @@ import {
   Package,
   Pickaxe,
   ListTodo,
-  Users,
   CheckCircle2,
   Circle,
   Moon,
@@ -37,6 +36,7 @@ function uid() {
 
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
+const APP_VERSION = "1.0.0";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -967,14 +967,20 @@ function LandsraadCard({ houses, setHouses, isDark }) {
 
                       <div className="flex items-center gap-2">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => togglePinned(h.id)}
-                          className={
-                            isDark ? "text-[#ccb089] hover:bg-[#2a2118]" : "text-[#7d5c31] hover:bg-[#efe1c8]"
-                          }
+                          className={`border ${
+                            h.pinned
+                              ? isDark
+                                ? "border-emerald-400 bg-emerald-900/40 text-emerald-200 hover:bg-emerald-800/50"
+                                : "border-emerald-600 bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                              : isDark
+                                ? "border-[#5a462c] bg-[#1f1710] text-[#e6d0ac] hover:bg-[#2a2118]"
+                                : "border-[#c9a878] bg-[#f7ead2] text-[#7d5c31] hover:bg-[#efe1c8]"
+                          }`}
                         >
-                          {h.pinned ? "Untrack" : "Track"}
+                          {h.pinned ? "Tracked" : "Track"}
                         </Button>
 
                         <Label className={`text-xs ${isDark ? "text-[#ceb89a]" : "text-[#6b5636]"}`}>
@@ -1284,7 +1290,7 @@ function AuthGate({ onSignedIn, isDark }) {
       className={`min-h-screen w-full flex items-center justify-center p-4 ${
         isDark
           ? "bg-[radial-gradient(circle_at_top,_#2a1c12_0%,_#120f0c_45%,_#0d0b09_100%)] text-[#f2e7d5]"
-          : "bg-[radial-gradient(circle_at_top,_#f6e9d3_0%,_#f2e4cd_45%,_#ebd9bd_100%)] text-[#3a2b17]"
+          : "bg-[radial-gradient(1200px_500px_at_15%_8%,_#fff0cd_0%,_#f6e3c0_35%,_transparent_70%),radial-gradient(900px_420px_at_85%_22%,_#efd5a6_0%,_#e4c38d_40%,_transparent_72%),linear-gradient(165deg,_#f8e8c9_0%,_#edd7b2_44%,_#dcc08f_100%)] text-[#3a2b17]"
       }`}
     >
       <Card
@@ -1657,7 +1663,7 @@ export default function App() {
       className={`min-h-screen w-full transition-colors ${
         isDark
           ? "bg-[radial-gradient(circle_at_top,_#2a1c12_0%,_#120f0c_45%,_#0d0b09_100%)] text-[#f2e7d5]"
-          : "bg-[radial-gradient(circle_at_top,_#f6e9d3_0%,_#f2e4cd_45%,_#ebd9bd_100%)] text-[#3a2b17]"
+          : "bg-[radial-gradient(1200px_500px_at_15%_8%,_#fff0cd_0%,_#f6e3c0_35%,_transparent_70%),radial-gradient(900px_420px_at_85%_22%,_#efd5a6_0%,_#e4c38d_40%,_transparent_72%),linear-gradient(165deg,_#f8e8c9_0%,_#edd7b2_44%,_#dcc08f_100%)] text-[#3a2b17]"
       }`}
     >
       <div className="mx-auto max-w-7xl p-4 md:p-8 space-y-6">
@@ -1670,13 +1676,6 @@ export default function App() {
         >
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="space-y-2">
-              <div
-                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs ${
-                  isDark ? "border-[#5a462c] text-[#ccb089]" : "border-[#caa779] text-[#76572f]"
-                }`}
-              >
-                <Users className="h-3.5 w-3.5" /> Co-op Tracker
-              </div>
               <h1 className="text-2xl md:text-4xl font-bold tracking-tight">
                 Dune Awakening: Landsraad Companion
               </h1>
@@ -1846,6 +1845,14 @@ export default function App() {
             />
           </TabsContent>
         </Tabs>
+      </div>
+
+      <div
+        className={`fixed bottom-3 right-4 text-xs font-medium tracking-wide ${
+          isDark ? "text-[#8f7652]" : "text-[#7e6440]"
+        }`}
+      >
+        v{APP_VERSION}
       </div>
     </div>
   );
