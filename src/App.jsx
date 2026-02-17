@@ -38,7 +38,7 @@ function uid() {
 
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "2.6.0";
+const APP_VERSION = "2.8.0";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -52,6 +52,25 @@ const WEEKDAY_INDEX = {
   Fri: 5,
   Sat: 6,
 };
+
+const APP_CHANGE_NOTES = [
+  {
+    version: "2.8.0",
+    notes: [
+      "Added Change Notes panel with version history.",
+      "Repurposed Session To-Do to Shared To-Do.",
+      "Shared To-Do now syncs to a shared Supabase record for all users.",
+    ],
+  },
+  {
+    version: "2.7.0",
+    notes: ["Made Atreides theme fully green across UI surfaces."],
+  },
+  {
+    version: "2.6.0",
+    notes: ["Added clearable search inputs and Atreides theme option."],
+  },
+];
 
 function safeParse(json, fallback) {
   try {
@@ -1842,7 +1861,7 @@ function AuthGate({ onSignedIn, isDark, isAtreides }) {
           : isAtreides
             ? "bg-[radial-gradient(900px_420px_at_18%_10%,_#d9efe1_0%,_transparent_60%),radial-gradient(780px_420px_at_82%_20%,_#bfd9c3_0%,_transparent_65%),linear-gradient(165deg,_#e7efe8_0%,_#d6e4d8_45%,_#bfceb9_100%)] text-[#243229]"
             : "bg-[radial-gradient(900px_440px_at_20%_6%,_#cfb5ef_0%,_transparent_62%),radial-gradient(1200px_500px_at_15%_8%,_#fff0cd_0%,_#f6e3c0_35%,_transparent_70%),radial-gradient(900px_420px_at_85%_22%,_#efd5a6_0%,_#e4c38d_40%,_transparent_72%),linear-gradient(165deg,_#f8e8c9_0%,_#edd7b2_44%,_#dcc08f_100%)] text-[#3a2b17]"
-      }`}
+      } ${isAtreides ? "theme-atreides" : ""}`}
     >
       <Card
         className={`w-full max-w-md rounded-2xl border ${
@@ -1971,6 +1990,9 @@ export default function App() {
   const [trackedOnlyMode, setTrackedOnlyMode] = useState(defaults.trackedOnlyMode);
   const [lastCloudSaveAt, setLastCloudSaveAt] = useState(null);
   const [lastCloudError, setLastCloudError] = useState(null);
+  const [sharedTodosReady, setSharedTodosReady] = useState(false);
+  const [lastSharedTodosError, setLastSharedTodosError] = useState(null);
+  const [showChangeNotes, setShowChangeNotes] = useState(false);
   const [weeklyResetCountdown, setWeeklyResetCountdown] = useState(() =>
     getTimeUntilNextTuesdayMidnightEt()
   );
@@ -2048,7 +2070,6 @@ export default function App() {
           } else if (typeof s.isDark === "boolean") {
             setThemeMode(s.isDark ? "dark" : "light");
           }
-          if (Array.isArray(s.sessionTodos)) setSessionTodos(s.sessionTodos);
           if (Array.isArray(s.materials)) setMaterials(s.materials);
           if (Array.isArray(s.farmItems)) setFarmItems(s.farmItems);
           if (Array.isArray(s.generalTodos)) setGeneralTodos(s.generalTodos);
@@ -2064,7 +2085,6 @@ export default function App() {
             state: {
               isDark,
               themeMode,
-              sessionTodos,
               materials,
               farmItems,
               generalTodos,
@@ -2090,6 +2110,50 @@ export default function App() {
     };
   }, [session?.user?.id, hydrated]);
 
+  // shared to-do load (all users)
+  useEffect(() => {
+    if (!session?.user?.id || !hydrated) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("shared_todos")
+          .select("todos")
+          .eq("key", "global")
+          .maybeSingle();
+
+        if (error) throw error;
+        if (cancelled) return;
+
+        if (Array.isArray(data?.todos)) {
+          setSessionTodos(data.todos);
+        } else {
+          await supabase.from("shared_todos").upsert(
+            {
+              key: "global",
+              todos: sessionTodos,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "key" }
+          );
+        }
+
+        setSharedTodosReady(true);
+        setLastSharedTodosError(null);
+      } catch (e) {
+        console.error("Shared to-do sync failed:", e?.message || e);
+        setSharedTodosReady(true);
+        setLastSharedTodosError(e?.message || "Shared to-do sync failed");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.id, hydrated]);
+
   // local autosave fallback
   useEffect(() => {
     if (!hydrated || typeof window === "undefined") return;
@@ -2098,7 +2162,6 @@ export default function App() {
       JSON.stringify({
         isDark,
         themeMode,
-        sessionTodos,
         materials,
         farmItems,
         generalTodos,
@@ -2111,7 +2174,6 @@ export default function App() {
     hydrated,
     isDark,
     themeMode,
-    sessionTodos,
     materials,
     farmItems,
     generalTodos,
@@ -2150,7 +2212,6 @@ export default function App() {
           state: {
             isDark,
             themeMode,
-            sessionTodos,
             materials,
             farmItems,
             generalTodos,
@@ -2177,7 +2238,6 @@ export default function App() {
     cloudReady,
     isDark,
     themeMode,
-    sessionTodos,
     materials,
     farmItems,
     generalTodos,
@@ -2185,6 +2245,30 @@ export default function App() {
     houseSwatches,
     trackedOnlyMode,
   ]);
+
+  // shared to-do autosave (debounced)
+  useEffect(() => {
+    if (!session?.user?.id || !hydrated || !sharedTodosReady) return;
+
+    const t = setTimeout(async () => {
+      try {
+        await supabase.from("shared_todos").upsert(
+          {
+            key: "global",
+            todos: sessionTodos,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "key" }
+        );
+        setLastSharedTodosError(null);
+      } catch (e) {
+        console.error("Shared to-do save failed:", e?.message || e);
+        setLastSharedTodosError(e?.message || "Shared to-do save failed");
+      }
+    }, 500);
+
+    return () => clearTimeout(t);
+  }, [session?.user?.id, hydrated, sharedTodosReady, sessionTodos]);
 
   const exportBackup = () => {
     if (typeof window === "undefined") return;
@@ -2195,7 +2279,6 @@ export default function App() {
       data: {
         isDark,
         themeMode,
-        sessionTodos,
         materials,
         farmItems,
         generalTodos,
@@ -2230,7 +2313,6 @@ export default function App() {
       } else if (typeof d.isDark === "boolean") {
         setThemeMode(d.isDark ? "dark" : "light");
       }
-      if (Array.isArray(d.sessionTodos)) setSessionTodos(d.sessionTodos);
       if (Array.isArray(d.materials)) setMaterials(d.materials);
       if (Array.isArray(d.farmItems)) setFarmItems(d.farmItems);
       if (Array.isArray(d.generalTodos)) setGeneralTodos(d.generalTodos);
@@ -2272,7 +2354,7 @@ export default function App() {
           : isAtreides
             ? "bg-[radial-gradient(950px_420px_at_18%_8%,_#d9efe1_0%,_transparent_63%),radial-gradient(900px_420px_at_85%_20%,_#bfdac8_0%,_transparent_66%),linear-gradient(165deg,_#e6efe8_0%,_#d4e1d4_46%,_#bdcbbd_100%)] text-[#233227]"
             : "bg-[radial-gradient(900px_440px_at_20%_6%,_#cfb5ef_0%,_transparent_62%),radial-gradient(1200px_500px_at_15%_8%,_#fff0cd_0%,_#f6e3c0_35%,_transparent_70%),radial-gradient(900px_420px_at_85%_22%,_#efd5a6_0%,_#e4c38d_40%,_transparent_72%),linear-gradient(165deg,_#f8e8c9_0%,_#edd7b2_44%,_#dcc08f_100%)] text-[#3a2b17]"
-      }`}
+      } ${isAtreides ? "theme-atreides" : ""}`}
     >
       <div className="mx-auto max-w-7xl p-4 md:p-8 space-y-6">
         <motion.div
@@ -2415,7 +2497,7 @@ export default function App() {
             }`}
           >
             <TabsTrigger value="coop" className={`rounded-xl gap-2 ${isMobile ? "shrink-0" : ""}`}>
-              <ListTodo className="h-4 w-4" /> Session To-Do
+              <ListTodo className="h-4 w-4" /> Shared To-Do
             </TabsTrigger>
             <TabsTrigger value="materials" className={`rounded-xl gap-2 ${isMobile ? "shrink-0" : ""}`}>
               <Package className="h-4 w-4" /> Materials
@@ -2436,14 +2518,19 @@ export default function App() {
 
           <TabsContent value="coop">
             <TodoListCard
-              title="Session To-Do"
-              description="Shared checklist for your next co-op session."
+              title="Shared To-Do"
+              description="Shared checklist synced for all users of this site."
               icon={ListTodo}
               items={sessionTodos}
               setItems={setSessionTodos}
               placeholder="e.g., Run Testing Labs in Deep Desert"
               isDark={isDark}
             />
+            {lastSharedTodosError ? (
+              <p className={`mt-2 text-xs ${isDark ? "text-amber-300" : "text-amber-700"}`}>
+                Shared To-Do sync warning: {lastSharedTodosError}
+              </p>
+            ) : null}
           </TabsContent>
 
           <TabsContent value="materials">
@@ -2483,13 +2570,76 @@ export default function App() {
         </Tabs>
       </div>
 
-      <div
-        className={`fixed bottom-3 right-4 text-xs font-medium tracking-wide ${
-          isDark ? "text-[#8f7652]" : "text-[#7e6440]"
-        }`}
-      >
-        v{APP_VERSION}
+      <div className="fixed bottom-3 right-4 flex flex-col items-end gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setShowChangeNotes(true)}
+          className={
+            isDark
+              ? "h-7 px-2 text-[11px] border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#d7c19d]"
+              : "h-7 px-2 text-[11px] border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
+          }
+        >
+          Change Notes
+        </Button>
+
+        <div
+          className={`text-xs font-medium tracking-wide ${
+            isDark ? "text-[#8f7652]" : "text-[#7e6440]"
+          }`}
+        >
+          v{APP_VERSION}
+        </div>
       </div>
+
+      {showChangeNotes ? (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4">
+          <div
+            className={`w-full max-w-lg rounded-2xl border p-4 sm:p-5 max-h-[80vh] overflow-y-auto ${
+              isDark
+                ? "bg-[#1a140f] border-[#5a452a] text-[#f2e7d5]"
+                : "bg-[#fff8ec] border-[#c9a878] text-[#3a2b17]"
+            }`}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-sm sm:text-base font-semibold">Change Notes</h3>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setShowChangeNotes(false)}
+                className={
+                  isDark
+                    ? "border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#e6d0ac]"
+                    : "border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
+                }
+              >
+                Close
+              </Button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {APP_CHANGE_NOTES.map((entry) => (
+                <div
+                  key={entry.version}
+                  className={`rounded-lg border p-3 ${
+                    isDark ? "border-[#4a3a25] bg-[#211910]" : "border-[#d8bc91] bg-[#fff3df]"
+                  }`}
+                >
+                  <p className="text-sm font-semibold">v{entry.version}</p>
+                  <ul className="mt-1 list-disc pl-5 text-xs space-y-1">
+                    {entry.notes.map((note) => (
+                      <li key={note}>{note}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
