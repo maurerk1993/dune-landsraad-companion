@@ -1,3 +1,60 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+  .theme-atreides .bg-\[\#fff9ef\] {
+    @apply bg-[#ecf6ef];
+  }
+
+  .theme-atreides .bg-\[\#fffaf0\] {
+    @apply bg-[#edf8f1];
+  }
+
+  .theme-atreides .bg-\[\#fffdf7\] {
+    @apply bg-[#f4fbf6];
+  }
+
+  .theme-atreides .bg-\[\#f7ead2\] {
+    @apply bg-[#dff0e3];
+  }
+
+  .theme-atreides .bg-\[\#efe1c8\] {
+    @apply bg-[#d8ebdd];
+  }
+
+  .theme-atreides .border-\[\#d8bc91\] {
+    @apply border-[#8fb59a];
+  }
+
+  .theme-atreides .border-\[\#dcc39b\] {
+    @apply border-[#97bea2];
+  }
+
+  .theme-atreides .border-\[\#c9a878\] {
+    @apply border-[#88b293];
+  }
+
+  .theme-atreides .text-\[\#3a2b17\] {
+    @apply text-[#1f3a2c];
+  }
+
+  .theme-atreides .text-\[\#6b5636\],
+  .theme-atreides .text-\[\#7a6342\],
+  .theme-atreides .text-\[\#6d4f27\],
+  .theme-atreides .text-\[\#7d5c31\] {
+    @apply text-[#355846];
+  }
+
+  .theme-atreides .bg-\[\#a56b2c\] {
+    @apply bg-[#2f6e4f];
+  }
+
+  .theme-atreides .hover\:bg-\[\#8d5821\]:hover {
+    @apply bg-[#285c43];
+  }
+
+  .theme-atreides .text-\[\#fff4de\] {
+    @apply text-[#edf9f1];
+  }
+}
