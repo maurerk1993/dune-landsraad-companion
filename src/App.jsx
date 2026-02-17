@@ -36,7 +36,7 @@ function uid() {
 
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.4.0";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -60,10 +60,54 @@ function safeParse(json, fallback) {
 }
 
 function houseAnchorSlug(houseName) {
+  const HOUSE_LOCATION_ANCHORS = {
+    "House Alexin": "alexin",
+    "House Argosaz": "argosaz",
+    "House Dyvetz": "dyvetz",
+    "House Ecaz": "ecaz",
+    "House Hagal": "hagal",
+    "House Hurata": "hurata",
+    "House Imota": "imota",
+    "House Kenola": "kenola",
+    "House Lindaren": "lindaren",
+    "House Maros": "maros",
+    "House Mikarrol": "mikarrol",
+    "House Moritani": "moritani",
+    "House Mutelli": "mutelli",
+    "House Novebruns": "novebruns",
+    "House Richese": "richese",
+    "House Sor": "sor",
+    "House Spinette": "spinette",
+    "House Taligari": "taligari",
+    "House Thorvald": "thorvald",
+    "House Tseida": "tseida",
+    "House Varota": "varota",
+    "House Vernius": "vernius",
+    "House Wallach": "wallach",
+    "House Wayku": "wayku",
+    "House Wydras": "wydras",
+  };
+
+  if (HOUSE_LOCATION_ANCHORS[houseName]) {
+    return HOUSE_LOCATION_ANCHORS[houseName];
+  }
+
   const base = houseName.toLowerCase().startsWith("house ")
     ? houseName.slice(6)
     : houseName;
   return base.toLowerCase().split(" ").filter(Boolean).join("-");
+}
+
+
+function houseMapLabel(houseName) {
+  const HOUSE_MAPS = {
+    "House Alexin": "Harko Village",
+    "House Varota": "Arakeen",
+    "House Wallach": "Arakeen",
+    "House Wayku": "Deep Desert",
+  };
+
+  return HOUSE_MAPS[houseName] || "Hagga Basin";
 }
 
 function getTimeZoneOffsetMs(date, timeZone) {
@@ -951,6 +995,16 @@ function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedO
                           }
                         >
                           Goals: {doneCount}/{h.goals.length}
+                        </Badge>
+
+                        <Badge
+                          className={
+                            isDark
+                              ? "bg-emerald-950/40 text-emerald-300 border border-emerald-800"
+                              : "bg-emerald-50 text-emerald-800 border border-emerald-400"
+                          }
+                        >
+                          Map: {houseMapLabel(h.name)}
                         </Badge>
 
                         <a
