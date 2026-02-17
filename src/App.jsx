@@ -38,7 +38,7 @@ function uid() {
 
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const SHARED_TODOS_CACHE_KEY = "dune_landsraad_shared_todos_cache_v1";
-const APP_VERSION = "3.5.0";
+const APP_VERSION = "3.6.0";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -54,6 +54,12 @@ const WEEKDAY_INDEX = {
 };
 
 const APP_CHANGE_NOTES = [
+  {
+    version: "3.6.0",
+    notes: [
+      "Added defensive Supabase client fallback so missing deploy env vars no longer crash to a blank page.",
+    ],
+  },
   {
     version: "3.5.0",
     notes: [
