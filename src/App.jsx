@@ -44,7 +44,7 @@ function uid() {
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const SHARED_TODOS_CACHE_KEY = "dune_landsraad_shared_todos_cache_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "3.4.3";
+const APP_VERSION = "3.4.4";
 const NEW_YORK_TIME_ZONE = "America/New_York";
 const ADMIN_EMAIL = "maurerk1993@gmail.com";
 const LOCATION_CONTENT_KEY = "global";
@@ -62,6 +62,14 @@ const WEEKDAY_INDEX = {
 };
 
 const APP_CHANGE_NOTES = [
+  {
+    version: "3.4.4",
+    notes: [
+      "Added a house swatch status bubble beside each Landsraad house so you can see earned state without leaving the tab.",
+      "Landsraad now shows House Swatch Earned when the matching Placeable Swatch is completed on the Swatches tab.",
+      "Landsraad now shows House Swatch Not Yet Earned when the matching Placeable Swatch is still incomplete.",
+    ],
+  },
   {
     version: "3.4.3",
     notes: [
@@ -497,6 +505,13 @@ function isDefaultHouseSwatchText(text) {
   const normalizedText = String(text).trim().toLowerCase();
   return ALL_LANDSRAAD_HOUSES.some(
     (houseName) => `${houseName} Placeable Swatch`.toLowerCase() === normalizedText
+  );
+}
+
+function hasEarnedHouseSwatch(houseName, swatches = []) {
+  const targetText = `${houseName} Placeable Swatch`.toLowerCase();
+  return swatches.some(
+    (swatch) => String(swatch?.text || "").trim().toLowerCase() === targetText && Boolean(swatch?.done)
   );
 }
 
@@ -1356,6 +1371,7 @@ function ItemsCard({ items, setItems, farmSources, isDark }) {
 function LandsraadCard({
   houses,
   setHouses,
+  houseSwatches,
   locationEntries,
   isDark,
   trackedOnlyMode,
@@ -1634,6 +1650,7 @@ function LandsraadCard({
             <div className="space-y-3 pr-1">
               {visibleHouses.map((h) => {
                 const doneCount = h.goals.filter((g) => g.done).length;
+                const houseSwatchEarned = hasEarnedHouseSwatch(h.name, houseSwatches);
 
                 return (
                   <div
@@ -1685,6 +1702,22 @@ function LandsraadCard({
                           }
                         >
                           Map: {houseMapLabel(h.name, locationEntries)}
+                        </Badge>
+
+                        <Badge
+                          className={
+                            houseSwatchEarned
+                              ? isDark
+                                ? "bg-emerald-900/40 text-emerald-300 border border-emerald-700"
+                                : "bg-emerald-100 text-emerald-800 border border-emerald-400"
+                              : isDark
+                                ? "bg-[#3a2a1b] text-[#e7d7bc] border border-[#5f482e]"
+                                : "bg-[#f6ead4] text-[#6e5331] border border-[#d6b181]"
+                          }
+                        >
+                          {houseSwatchEarned
+                            ? "House Swatch Earned"
+                            : "House Swatch Not Yet Earned"}
                         </Badge>
 
                         <Button
@@ -1841,6 +1874,7 @@ function LandsraadCard({
               <div className="space-y-3">
                 {visibleHouses.map((h) => {
                   const doneCount = h.goals.filter((g) => g.done).length;
+                  const houseSwatchEarned = hasEarnedHouseSwatch(h.name, houseSwatches);
 
                   return (
                     <div
@@ -1892,6 +1926,22 @@ function LandsraadCard({
                             }
                           >
                             Map: {houseMapLabel(h.name, locationEntries)}
+                          </Badge>
+
+                          <Badge
+                            className={
+                              houseSwatchEarned
+                                ? isDark
+                                  ? "bg-emerald-900/40 text-emerald-300 border border-emerald-700"
+                                  : "bg-emerald-100 text-emerald-800 border border-emerald-400"
+                                : isDark
+                                  ? "bg-[#3a2a1b] text-[#e7d7bc] border border-[#5f482e]"
+                                  : "bg-[#f6ead4] text-[#6e5331] border border-[#d6b181]"
+                            }
+                          >
+                            {houseSwatchEarned
+                              ? "House Swatch Earned"
+                              : "House Swatch Not Yet Earned"}
                           </Badge>
 
                           <Button
@@ -3354,6 +3404,7 @@ export default function App() {
             <LandsraadCard
               houses={landsraadHouses}
               setHouses={setLandsraadHouses}
+              houseSwatches={houseSwatches}
               locationEntries={locationEntries}
               isDark={isDark}
               isMobile={isMobile}
