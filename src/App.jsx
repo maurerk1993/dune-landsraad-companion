@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,7 @@ import {
   UserCircle2,
   Loader2,
   Search,
+  Wrench,
   X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
