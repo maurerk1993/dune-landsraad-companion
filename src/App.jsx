@@ -36,7 +36,7 @@ function uid() {
 
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.2.0";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -153,6 +153,7 @@ function formatCountdown(ms) {
   return `${days}d ${hours}h ${minutes}m ${seconds}s`;
 }
 
+
 const ALL_LANDSRAAD_HOUSES = [
   "House Alexin",
   "House Argosaz",
@@ -216,6 +217,7 @@ function makeDefaultState() {
     ],
     landsraadHouses: makeDefaultHouses(),
     houseSwatches: [{ id: uid(), text: "Atreides Sand Pattern", done: true }],
+    trackedOnlyMode: false,
   };
 }
 
@@ -717,7 +719,7 @@ function ItemsCard({ items, setItems, isDark }) {
   );
 }
 
-function LandsraadCard({ houses, setHouses, isDark }) {
+function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedOnlyMode }) {
   const [rewardName, setRewardName] = useState("");
   const [requiredAmount, setRequiredAmount] = useState("");
   const [targetHouseId, setTargetHouseId] = useState("");
@@ -728,11 +730,16 @@ function LandsraadCard({ houses, setHouses, isDark }) {
     (acc, h) => acc + h.goals.filter((g) => g.done).length,
     0
   );
+  const trackedHousesCount = houses.filter((h) => h.pinned).length;
 
   const sortedHouses = [...houses].sort((a, b) => {
     if (a.pinned === b.pinned) return a.name.localeCompare(b.name);
     return a.pinned ? -1 : 1;
   });
+
+  const visibleHouses = trackedOnlyMode
+    ? sortedHouses.filter((house) => house.pinned)
+    : sortedHouses;
 
   const resetWeek = () => {
     setHouses(
@@ -774,6 +781,8 @@ function LandsraadCard({ houses, setHouses, isDark }) {
     setRequiredAmount("");
   };
 
+
+
   const toggleGoal = (houseId, goalId) => {
     setHouses(
       houses.map((h) =>
@@ -792,6 +801,8 @@ function LandsraadCard({ houses, setHouses, isDark }) {
     );
   };
 
+  const trackedRoute = sortedHouses.filter((house) => house.pinned);
+
   return (
     <div className="space-y-4">
       <Card
@@ -802,8 +813,8 @@ function LandsraadCard({ houses, setHouses, isDark }) {
         <CardHeader className="space-y-3">
           <SectionHeader
             icon={Landmark}
-            title="Landsraad Tracker"
-            subtitle="Track house progress, reward goals, and weekly turn-ins."
+            title="Landsraad Operations Console"
+            subtitle="Track house progress, apply templates, and command weekly turn-ins."
             isDark={isDark}
           />
           <div className="flex flex-wrap items-center gap-2">
@@ -817,11 +828,38 @@ function LandsraadCard({ houses, setHouses, isDark }) {
             >
               <Clock3 className="h-3.5 w-3.5 mr-1" /> Weekly Cycle Helper
             </Badge>
+            <Badge
+              className={
+                isDark
+                  ? "bg-[#243426] text-emerald-200 border border-emerald-700"
+                  : "bg-emerald-100 text-emerald-800 border border-emerald-400"
+              }
+            >
+              Tracked Houses: {trackedHousesCount}
+            </Badge>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex flex-wrap justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setTrackedOnlyMode((v) => !v)}
+                className={
+                  trackedOnlyMode
+                    ? isDark
+                      ? "border-emerald-400 bg-emerald-900/40 text-emerald-200"
+                      : "border-emerald-600 bg-emerald-100 text-emerald-800"
+                    : isDark
+                      ? "border-[#5a462c] bg-[#211910] text-[#e6d0ac]"
+                      : "border-[#c9a878] bg-[#f7ead2] text-[#6d4f27]"
+                }
+              >
+                {trackedOnlyMode ? "Showing Tracked Only" : "Show Tracked Only"}
+              </Button>
+            </div>
+
             <Button
               onClick={() => setShowResetConfirm(true)}
               variant="outline"
@@ -835,80 +873,42 @@ function LandsraadCard({ houses, setHouses, isDark }) {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
-            <div className="md:col-span-5">
-              <Label className={`text-xs ${isDark ? "text-[#ceb89a]" : "text-[#6b5636]"}`}>
-                House for Goal
-              </Label>
-              <select
-                value={targetHouseId}
-                onChange={(e) => setTargetHouseId(e.target.value)}
-                className={`h-10 w-full rounded-md border px-3 text-sm ${
-                  isDark
-                    ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]"
-                    : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"
-                }`}
-              >
-                <option value="">Select house</option>
-                {sortedHouses.map((h) => (
-                  <option key={h.id} value={h.id}>
-                    {h.name}
-                  </option>
+          <div
+            className={`rounded-xl border p-3 ${
+              isDark ? "border-[#4a3a25] bg-[#1a140f]" : "border-[#d4b07b] bg-[#fff4df]"
+            }`}
+          >
+            <p className={`text-xs font-semibold mb-2 ${isDark ? "text-[#d8c3a1]" : "text-[#6b5636]"}`}>
+              Route Assistant (Tracked Houses)
+            </p>
+            {trackedRoute.length === 0 ? (
+              <p className={`text-xs ${isDark ? "text-[#a79274]" : "text-[#7a6342]"}`}>
+                Track a house to build your route list.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {trackedRoute.map((house) => (
+                  <a
+                    key={house.id}
+                    href={`${METHOD_LANDSRAAD_BASE_URL}#${houseAnchorSlug(house.name)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`inline-flex items-center rounded-md border px-2 py-1 text-xs ${
+                      isDark
+                        ? "border-[#5a462c] bg-[#211910] text-[#e6d0ac] hover:bg-[#2a2118]"
+                        : "border-[#c9a878] bg-[#f7ead2] text-[#6d4f27] hover:bg-[#efdfc2]"
+                    }`}
+                  >
+                    {house.name}
+                  </a>
                 ))}
-              </select>
-            </div>
-
-            <div className="md:col-span-4">
-              <Label className={`text-xs ${isDark ? "text-[#ceb89a]" : "text-[#6b5636]"}`}>
-                Reward Goal Name
-              </Label>
-              <Input
-                value={rewardName}
-                onChange={(e) => setRewardName(e.target.value)}
-                placeholder="e.g., Weekly Cache"
-                className={
-                  isDark
-                    ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]"
-                    : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"
-                }
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <Label className={`text-xs ${isDark ? "text-[#ceb89a]" : "text-[#6b5636]"}`}>
-                Required Amount
-              </Label>
-              <Input
-                type="number"
-                min={1}
-                value={requiredAmount}
-                onChange={(e) => setRequiredAmount(e.target.value)}
-                placeholder="e.g., 5000"
-                className={
-                  isDark
-                    ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]"
-                    : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"
-                }
-              />
-            </div>
-
-            <div className="md:col-span-1 flex items-end">
-              <Button
-                onClick={addGoal}
-                className={
-                  isDark
-                    ? "w-full gap-2 bg-[#c48a3a] hover:bg-[#d59a48] text-[#1a1208]"
-                    : "w-full gap-2 bg-[#a56b2c] hover:bg-[#8d5821] text-[#fff4de]"
-                }
-              >
-                <Plus className="h-4 w-4" /> Add
-              </Button>
-            </div>
+              </div>
+            )}
           </div>
 
           <ScrollArea className="h-[calc(100vh-17rem)] min-h-[620px] pr-2">
             <div className="space-y-3">
-              {sortedHouses.map((h) => {
+              {visibleHouses.map((h) => {
                 const doneCount = h.goals.filter((g) => g.done).length;
 
                 return (
@@ -935,8 +935,8 @@ function LandsraadCard({ houses, setHouses, isDark }) {
                           <Badge
                             className={
                               isDark
-                                ? "bg-[#2a2118] text-[#e7d7bc] border border-[#4a3a25]"
-                                : "bg-[#efe1c8] text-[#5a4528] border border-[#c9a878]"
+                                ? "bg-[#2b3f2e] text-[#bcf0c9] border border-emerald-600"
+                                : "bg-emerald-100 text-emerald-800 border border-emerald-500"
                             }
                           >
                             Tracked
@@ -1013,6 +1013,8 @@ function LandsraadCard({ houses, setHouses, isDark }) {
                     <div className="space-y-2">
                       {h.goals.map((g) => {
                         const remaining = Math.max(g.required - h.current, 0);
+                        const projectedPct = g.required > 0 ? Math.min(100, Math.round((h.current / g.required) * 100)) : 0;
+
                         return (
                           <div
                             key={g.id}
@@ -1060,8 +1062,7 @@ function LandsraadCard({ houses, setHouses, isDark }) {
                                   )}
                                 </div>
                                 <p className={`text-xs ${completionSubtextClass(g.done, isDark)}`}>
-                                  Requires: {g.required.toLocaleString()} • Remaining:{" "}
-                                  {remaining.toLocaleString()}
+                                  Requires: {g.required.toLocaleString()} • Remaining: {remaining.toLocaleString()} • Projection: {projectedPct}%
                                 </p>
                               </div>
                             </div>
@@ -1095,6 +1096,18 @@ function LandsraadCard({ houses, setHouses, isDark }) {
                   </div>
                 );
               })}
+
+              {visibleHouses.length === 0 ? (
+                <div
+                  className={`rounded-lg border border-dashed p-3 text-xs ${
+                    isDark
+                      ? "border-[#4a3a25] text-[#a79274]"
+                      : "border-[#caa779] text-[#7a6342]"
+                  }`}
+                >
+                  No houses match the current filter.
+                </div>
+              ) : null}
             </div>
           </ScrollArea>
         </CardContent>
@@ -1363,6 +1376,7 @@ function AuthGate({ onSignedIn, isDark }) {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
               placeholder="At least 6 characters"
               className={
                 isDark
@@ -1415,6 +1429,9 @@ export default function App() {
   const [generalTodos, setGeneralTodos] = useState(defaults.generalTodos);
   const [landsraadHouses, setLandsraadHouses] = useState(defaults.landsraadHouses);
   const [houseSwatches, setHouseSwatches] = useState(defaults.houseSwatches);
+  const [trackedOnlyMode, setTrackedOnlyMode] = useState(defaults.trackedOnlyMode);
+  const [lastCloudSaveAt, setLastCloudSaveAt] = useState(null);
+  const [lastCloudError, setLastCloudError] = useState(null);
   const [weeklyResetCountdown, setWeeklyResetCountdown] = useState(() =>
     getTimeUntilNextTuesdayMidnightEt()
   );
@@ -1453,6 +1470,7 @@ export default function App() {
       if (Array.isArray(saved.generalTodos)) setGeneralTodos(saved.generalTodos);
       if (Array.isArray(saved.landsraadHouses)) setLandsraadHouses(saved.landsraadHouses);
       if (Array.isArray(saved.houseSwatches)) setHouseSwatches(saved.houseSwatches);
+      if (typeof saved.trackedOnlyMode === "boolean") setTrackedOnlyMode(saved.trackedOnlyMode);
     }
 
     setHydrated(true);
@@ -1485,6 +1503,7 @@ export default function App() {
           if (Array.isArray(s.generalTodos)) setGeneralTodos(s.generalTodos);
           if (Array.isArray(s.landsraadHouses)) setLandsraadHouses(s.landsraadHouses);
           if (Array.isArray(s.houseSwatches)) setHouseSwatches(s.houseSwatches);
+          if (typeof s.trackedOnlyMode === "boolean") setTrackedOnlyMode(s.trackedOnlyMode);
         } else {
           // Seed first cloud row with current local state
           await supabase.from("user_app_state").upsert({
@@ -1497,15 +1516,18 @@ export default function App() {
               generalTodos,
               landsraadHouses,
               houseSwatches,
+              trackedOnlyMode,
             },
             updated_at: new Date().toISOString(),
           });
         }
 
         setCloudReady(true);
+        setLastCloudError(null);
       } catch (e) {
         console.error("Cloud load failed:", e?.message || e);
         setCloudReady(true); // allow app usage even if cloud fails
+        setLastCloudError(e?.message || "Cloud load failed");
       }
     })();
 
@@ -1527,6 +1549,7 @@ export default function App() {
         generalTodos,
         landsraadHouses,
         houseSwatches,
+        trackedOnlyMode,
       })
     );
   }, [
@@ -1538,6 +1561,7 @@ export default function App() {
     generalTodos,
     landsraadHouses,
     houseSwatches,
+    trackedOnlyMode,
   ]);
 
   useEffect(() => {
@@ -1565,11 +1589,15 @@ export default function App() {
             generalTodos,
             landsraadHouses,
             houseSwatches,
+            trackedOnlyMode,
           },
           updated_at: new Date().toISOString(),
         });
+        setLastCloudSaveAt(new Date().toISOString());
+        setLastCloudError(null);
       } catch (e) {
         console.error("Cloud save failed:", e?.message || e);
+        setLastCloudError(e?.message || "Cloud save failed");
       } finally {
         setCloudSaving(false);
       }
@@ -1587,6 +1615,7 @@ export default function App() {
     generalTodos,
     landsraadHouses,
     houseSwatches,
+    trackedOnlyMode,
   ]);
 
   const exportBackup = () => {
@@ -1603,6 +1632,7 @@ export default function App() {
         generalTodos,
         landsraadHouses,
         houseSwatches,
+        trackedOnlyMode,
       },
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
@@ -1633,6 +1663,7 @@ export default function App() {
       if (Array.isArray(d.generalTodos)) setGeneralTodos(d.generalTodos);
       if (Array.isArray(d.landsraadHouses)) setLandsraadHouses(d.landsraadHouses);
       if (Array.isArray(d.houseSwatches)) setHouseSwatches(d.houseSwatches);
+      if (typeof d.trackedOnlyMode === "boolean") setTrackedOnlyMode(d.trackedOnlyMode);
 
       window.alert("Backup imported successfully.");
     };
@@ -1680,7 +1711,7 @@ export default function App() {
                 Dune Awakening: Landsraad Companion
               </h1>
               <p className={`text-sm md:text-base max-w-2xl ${isDark ? "text-[#c8bca7]" : "text-[#6b5636]"}`}>
-                Your app for tracking everything in Dune Awakening.
+                Command center for Great House goals, weekly strategy, and Landsraad cycle planning.
               </p>
 
               <div className="mt-3 flex flex-wrap gap-2">
@@ -1760,6 +1791,13 @@ export default function App() {
                     ? "Saving to cloud..."
                     : "Cloud sync active"}
               </div>
+              <div className={`text-[11px] ${isDark ? "text-[#947d5e]" : "text-[#846742]"}`}>
+                {lastCloudError
+                  ? `Sync issue: ${lastCloudError}`
+                  : lastCloudSaveAt
+                    ? `Last cloud save: ${new Date(lastCloudSaveAt).toLocaleTimeString()}`
+                    : "Awaiting first cloud save..."}
+              </div>
 
               <div
                 className={`rounded-xl border px-3 py-2 text-xs min-w-[220px] ${
@@ -1826,7 +1864,13 @@ export default function App() {
           </TabsContent>
 
           <TabsContent value="landsraad">
-            <LandsraadCard houses={landsraadHouses} setHouses={setLandsraadHouses} isDark={isDark} />
+            <LandsraadCard
+              houses={landsraadHouses}
+              setHouses={setLandsraadHouses}
+              isDark={isDark}
+              trackedOnlyMode={trackedOnlyMode}
+              setTrackedOnlyMode={setTrackedOnlyMode}
+            />
           </TabsContent>
 
           <TabsContent value="swatches">
