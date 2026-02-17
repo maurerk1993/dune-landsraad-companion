@@ -44,11 +44,12 @@ function uid() {
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const SHARED_TODOS_CACHE_KEY = "dune_landsraad_shared_todos_cache_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "3.4.2";
+const APP_VERSION = "3.4.3";
 const NEW_YORK_TIME_ZONE = "America/New_York";
 const ADMIN_EMAIL = "maurerk1993@gmail.com";
 const LOCATION_CONTENT_KEY = "global";
 const LOCATION_IMAGES_BUCKET = "landsraad-location-images";
+const MAP_LOCATION_OPTIONS = ["Hagga Basin", "Deep Desert", "Arakeen", "Harko Village"];
 
 const WEEKDAY_INDEX = {
   Sun: 0,
@@ -61,6 +62,14 @@ const WEEKDAY_INDEX = {
 };
 
 const APP_CHANGE_NOTES = [
+  {
+    version: "3.4.3",
+    notes: [
+      "Added per-house map location dropdowns in Landsraad Location Admin with Hagga Basin, Deep Desert, Arakeen, and Harko Village options.",
+      "Updated Landsraad map badges and View Location popup to use the admin-selected map location.",
+      "Corrected default map locations for House Maros, House Mutelli, and House Spinette.",
+    ],
+  },
   {
     version: "3.4.2",
     notes: [
@@ -195,15 +204,25 @@ function safeParse(json, fallback) {
   }
 }
 
-function houseMapLabel(houseName) {
-  const HOUSE_MAPS = {
+const DEFAULT_HOUSE_MAPS = {
     "House Alexin": "Harko Village",
+    "House Maros": "Deep Desert",
+    "House Mutelli": "Arakeen",
+    "House Spinette": "Harko Village",
     "House Varota": "Arakeen",
     "House Wallach": "Arakeen",
     "House Wayku": "Deep Desert",
-  };
+};
 
-  return HOUSE_MAPS[houseName] || "Hagga Basin";
+function getDefaultHouseMapLabel(houseName) {
+  return DEFAULT_HOUSE_MAPS[houseName] || "Hagga Basin";
+}
+
+function houseMapLabel(houseName, locationEntries = {}) {
+  const selectedMap = locationEntries?.[houseName]?.mapLocation;
+  if (MAP_LOCATION_OPTIONS.includes(selectedMap)) return selectedMap;
+
+  return getDefaultHouseMapLabel(houseName);
 }
 
 function getTimeZoneOffsetMs(date, timeZone) {
@@ -388,6 +407,7 @@ function makeDefaultHouseLocationEntries() {
       imageUrl: "",
       storagePath: "",
       notes: "",
+      mapLocation: getDefaultHouseMapLabel(houseName),
     };
     return acc;
   }, {});
@@ -406,6 +426,9 @@ function normalizeHouseLocationEntries(entries = {}) {
       imageUrl: typeof existing?.imageUrl === "string" ? existing.imageUrl : "",
       storagePath: typeof existing?.storagePath === "string" ? existing.storagePath : "",
       notes: typeof existing?.notes === "string" ? existing.notes : "",
+      mapLocation: MAP_LOCATION_OPTIONS.includes(existing?.mapLocation)
+        ? existing.mapLocation
+        : getDefaultHouseMapLabel(houseName),
     };
     return acc;
   }, {});
@@ -1333,6 +1356,7 @@ function ItemsCard({ items, setItems, farmSources, isDark }) {
 function LandsraadCard({
   houses,
   setHouses,
+  locationEntries,
   isDark,
   trackedOnlyMode,
   setTrackedOnlyMode,
@@ -1660,7 +1684,7 @@ function LandsraadCard({
                               : "bg-emerald-50 text-emerald-800 border border-emerald-400"
                           }
                         >
-                          Map: {houseMapLabel(h.name)}
+                          Map: {houseMapLabel(h.name, locationEntries)}
                         </Badge>
 
                         <Button
@@ -1867,7 +1891,7 @@ function LandsraadCard({
                                 : "bg-emerald-50 text-emerald-800 border border-emerald-400"
                             }
                           >
-                            Map: {houseMapLabel(h.name)}
+                            Map: {houseMapLabel(h.name, locationEntries)}
                           </Badge>
 
                           <Button
@@ -3043,6 +3067,17 @@ export default function App() {
     }));
   };
 
+  const updateLocationMap = (houseName, mapLocation) => {
+    if (!MAP_LOCATION_OPTIONS.includes(mapLocation)) return;
+
+    setLocationEntries((prev) => ({
+      ...prev,
+      [houseName]: {
+        ...(prev[houseName] || {}),
+        mapLocation,
+      },
+    }));
+  };
 
   const addFarmSource = () => {
     const nextSource = farmSourceInput.trim();
@@ -3319,6 +3354,7 @@ export default function App() {
             <LandsraadCard
               houses={landsraadHouses}
               setHouses={setLandsraadHouses}
+              locationEntries={locationEntries}
               isDark={isDark}
               isMobile={isMobile}
               trackedOnlyMode={trackedOnlyMode}
@@ -3468,6 +3504,16 @@ export default function App() {
             </div>
 
             <div className="mt-4 space-y-3">
+              <Badge
+                className={
+                  isDark
+                    ? "bg-emerald-950/40 text-emerald-300 border border-emerald-800"
+                    : "bg-emerald-50 text-emerald-800 border border-emerald-400"
+                }
+              >
+                Map: {houseMapLabel(selectedLocationHouse, locationEntries)}
+              </Badge>
+
               {locationEntries[selectedLocationHouse]?.imageUrl ? (
                 <img
                   src={locationEntries[selectedLocationHouse].imageUrl}
@@ -3521,7 +3567,7 @@ export default function App() {
             </div>
 
             <p className={`mt-2 text-xs ${isDark ? "text-[#c8bca7]" : "text-[#7a6342]"}`}>
-              Upload map screenshots and optional notes shown in the View Location popup.
+              Upload map screenshots, select map locations, and edit optional popup notes shown in the View Location popup.
             </p>
             {locationEntriesError ? (
               <p className={`mt-2 text-xs ${isDark ? "text-amber-300" : "text-amber-700"}`}>
@@ -3598,6 +3644,27 @@ export default function App() {
                     }`}
                   >
                     <p className="text-sm font-semibold">{houseName}</p>
+
+                    <div className="mt-2 space-y-2">
+                      <Label className={`text-xs ${isDark ? "text-[#ceb89a]" : "text-[#6b5636]"}`}>
+                        Map location
+                      </Label>
+                      <select
+                        value={houseMapLabel(houseName, locationEntries)}
+                        onChange={(e) => updateLocationMap(houseName, e.target.value)}
+                        className={`w-full rounded-md border px-3 py-2 text-sm ${
+                          isDark
+                            ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]"
+                            : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"
+                        }`}
+                      >
+                        {MAP_LOCATION_OPTIONS.map((mapLocation) => (
+                          <option key={mapLocation} value={mapLocation}>
+                            {mapLocation}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
                     <div className="mt-2 space-y-2">
                       <Label className={`text-xs ${isDark ? "text-[#ceb89a]" : "text-[#6b5636]"}`}>
