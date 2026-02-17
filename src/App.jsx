@@ -721,6 +721,7 @@ function LandsraadCard({ houses, setHouses, isDark }) {
   const [rewardName, setRewardName] = useState("");
   const [requiredAmount, setRequiredAmount] = useState("");
   const [targetHouseId, setTargetHouseId] = useState("");
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const totalGoals = houses.reduce((acc, h) => acc + h.goals.length, 0);
   const achievedGoals = houses.reduce(
@@ -822,7 +823,7 @@ function LandsraadCard({ houses, setHouses, isDark }) {
         <CardContent className="space-y-4">
           <div className="flex justify-end">
             <Button
-              onClick={resetWeek}
+              onClick={() => setShowResetConfirm(true)}
               variant="outline"
               className={
                 isDark
@@ -1092,6 +1093,50 @@ function LandsraadCard({ houses, setHouses, isDark }) {
           </ScrollArea>
         </CardContent>
       </Card>
+
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
+          <div
+            className={`w-full max-w-md rounded-2xl border p-5 shadow-2xl ${
+              isDark ? "bg-[#1a140f] border-[#5a452a] text-[#f2e7d5]" : "bg-[#fff8ec] border-[#c9a878] text-[#3a2b17]"
+            }`}
+          >
+            <h3 className="text-base font-semibold">Reset Landsraad progress for the week?</h3>
+            <p className={`mt-2 text-sm ${isDark ? "text-[#d8c3a1]" : "text-[#6b5636]"}`}>
+              This will clear all house progress and remove any reward goals you manually entered.
+            </p>
+            <p className={`mt-1 text-xs ${isDark ? "text-[#a79274]" : "text-[#7a6342]"}`}>
+              This action cannot be undone.
+            </p>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowResetConfirm(false)}
+                className={
+                  isDark
+                    ? "border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#e6d0ac]"
+                    : "border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
+                }
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  resetWeek();
+                  setShowResetConfirm(false);
+                }}
+                className={
+                  isDark
+                    ? "bg-[#b26e2b] hover:bg-[#ca7b31] text-[#1a1208]"
+                    : "bg-[#a56b2c] hover:bg-[#8d5821] text-[#fff4de]"
+                }
+              >
+                Accept Reset
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
