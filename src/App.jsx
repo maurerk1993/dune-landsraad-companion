@@ -39,7 +39,7 @@ function uid() {
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const SHARED_TODOS_CACHE_KEY = "dune_landsraad_shared_todos_cache_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "3.2.1";
+const APP_VERSION = "3.2.2";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -55,6 +55,13 @@ const WEEKDAY_INDEX = {
 };
 
 const APP_CHANGE_NOTES = [
+  {
+    version: "3.2.2",
+    notes: [
+      "Reworked Landsraad mobile/desktop conditional rendering to avoid JSX token mismatch in production builds.",
+      "Eliminated the ternary close pattern near Tabs content that triggered Vercel esbuild parse errors.",
+    ],
+  },
   {
     version: "3.2.1",
     notes: [
@@ -1215,7 +1222,7 @@ function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedO
             </div>
           </div>
 
-          {isMobile ? (
+          {isMobile && (
             <div className="space-y-3 pr-1">
               {visibleHouses.map((h) => {
                 const doneCount = h.goals.filter((g) => g.done).length;
@@ -1419,7 +1426,9 @@ function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedO
                 </div>
               ) : null}
             </div>
-          ) : (
+          )}
+
+          {!isMobile && (
             <ScrollArea className="h-[calc(100vh-17rem)] min-h-[620px] pr-2">
               <div className="space-y-3">
                 {visibleHouses.map((h) => {
@@ -2661,30 +2670,6 @@ export default function App() {
 
         </Tabs>
         )}
-      </div>
-
-      <div className="fixed bottom-3 right-4 flex flex-col items-end gap-2">
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => setShowChangeNotes(true)}
-          className={
-            isDark
-              ? "h-7 px-2 text-[11px] border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#d7c19d]"
-              : "h-7 px-2 text-[11px] border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
-          }
-        >
-          Change Notes
-        </Button>
-
-        <div
-          className={`text-xs font-medium tracking-wide ${
-            isDark ? "text-[#8f7652]" : "text-[#7e6440]"
-          }`}
-        >
-          v{APP_VERSION}
-        </div>
       </div>
 
       <div className="fixed bottom-3 right-4 flex flex-col items-end gap-2">
