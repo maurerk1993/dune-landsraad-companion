@@ -1,3 +1,123 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+  .theme-atreides .bg-\[\#fff9ef\] {
+    @apply bg-[#2a4338];
+  }
+
+  .theme-atreides .bg-\[\#fffaf0\] {
+    @apply bg-[#2d473b];
+  }
+
+  .theme-atreides .bg-\[\#fffdf7\] {
+    @apply bg-[#355246];
+  }
+
+  .theme-atreides .bg-\[\#f7ead2\] {
+    @apply bg-[#314c40];
+  }
+
+  .theme-atreides .bg-\[\#efe1c8\] {
+    @apply bg-[#2c4439];
+  }
+
+  .theme-atreides .border-\[\#d8bc91\] {
+    @apply border-[#668974];
+  }
+
+  .theme-atreides .border-\[\#dcc39b\] {
+    @apply border-[#6c8f79];
+  }
+
+  .theme-atreides .border-\[\#c9a878\] {
+    @apply border-[#5f846f];
+  }
+
+  .theme-atreides .text-\[\#3a2b17\] {
+    @apply text-[#deece3];
+  }
+
+  .theme-atreides .text-\[\#6b5636\],
+  .theme-atreides .text-\[\#7a6342\],
+  .theme-atreides .text-\[\#6d4f27\],
+  .theme-atreides .text-\[\#7d5c31\],
+  .theme-atreides .text-\[\#7a5a2e\],
+  .theme-atreides .text-\[\#5a4528\],
+  .theme-atreides .text-\[\#7b6342\],
+  .theme-atreides .text-\[\#8a632f\] {
+    @apply text-[#c2d8ca];
+  }
+
+  .theme-atreides .bg-\[\#a56b2c\] {
+    @apply bg-[#4f765d];
+  }
+
+  .theme-atreides .hover\:bg-\[\#8d5821\]:hover {
+    @apply bg-[#42644f];
+  }
+
+  .theme-atreides .text-\[\#fff4de\] {
+    @apply text-[#e6f3ea];
+  }
+
+  .theme-spice .bg-\[\#fff9ef\] {
+    @apply bg-[#ead8f5];
+  }
+
+  .theme-spice .bg-\[\#fffaf0\] {
+    @apply bg-[#ead7f6];
+  }
+
+  .theme-spice .bg-\[\#fffdf7\] {
+    @apply bg-[#f2e5fa];
+  }
+
+  .theme-spice .bg-\[\#f7ead2\] {
+    @apply bg-[#e0c8ef];
+  }
+
+  .theme-spice .bg-\[\#efe1c8\] {
+    @apply bg-[#d9bce8];
+  }
+
+  .theme-spice .border-\[\#d8bc91\] {
+    @apply border-[#9d75be];
+  }
+
+  .theme-spice .border-\[\#dcc39b\] {
+    @apply border-[#a27ac2];
+  }
+
+  .theme-spice .border-\[\#c9a878\] {
+    @apply border-[#8d64b1];
+  }
+
+  .theme-spice .text-\[\#3a2b17\] {
+    @apply text-[#3e1f59];
+  }
+
+  .theme-spice .text-\[\#6b5636\],
+  .theme-spice .text-\[\#7a6342\],
+  .theme-spice .text-\[\#6d4f27\],
+  .theme-spice .text-\[\#7d5c31\],
+  .theme-spice .text-\[\#7a5a2e\],
+  .theme-spice .text-\[\#5a4528\],
+  .theme-spice .text-\[\#7b6342\],
+  .theme-spice .text-\[\#8a632f\] {
+    @apply text-[#5a3678];
+  }
+
+  .theme-spice .bg-\[\#a56b2c\] {
+    @apply bg-[#9256c0];
+  }
+
+  .theme-spice .hover\:bg-\[\#8d5821\]:hover {
+    @apply bg-[#7e47aa];
+  }
+
+  .theme-spice .text-\[\#fff4de\] {
+    @apply text-[#f3e9ff];
+  }
+}
