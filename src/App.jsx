@@ -36,7 +36,7 @@ function uid() {
 
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "1.6.0";
+const APP_VERSION = "1.7.0";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -1448,7 +1448,7 @@ function AuthGate({ onSignedIn, isDark }) {
     <div
       className={`min-h-screen w-full flex items-center justify-center p-4 ${
         isDark
-          ? "bg-[radial-gradient(circle_at_top,_#2a1c12_0%,_#120f0c_45%,_#0d0b09_100%)] text-[#f2e7d5]"
+          ? "bg-[radial-gradient(1100px_520px_at_12%_8%,_#3e2748_0%,_transparent_58%),radial-gradient(900px_440px_at_88%_18%,_#4a1e28_0%,_transparent_62%),radial-gradient(700px_360px_at_50%_115%,_#2a2f5e_0%,_transparent_68%),linear-gradient(170deg,_#1b1319_0%,_#110d12_48%,_#0b090d_100%)] text-[#f2e7d5]"
           : "bg-[radial-gradient(1200px_500px_at_15%_8%,_#fff0cd_0%,_#f6e3c0_35%,_transparent_70%),radial-gradient(900px_420px_at_85%_22%,_#efd5a6_0%,_#e4c38d_40%,_transparent_72%),linear-gradient(165deg,_#f8e8c9_0%,_#edd7b2_44%,_#dcc08f_100%)] text-[#3a2b17]"
       }`}
     >
@@ -1824,7 +1824,7 @@ export default function App() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-[#120f0c] text-[#f2e7d5]">
+      <div className="min-h-screen w-full flex items-center justify-center bg-[radial-gradient(900px_400px_at_15%_5%,_#3a2342_0%,_transparent_60%),radial-gradient(700px_300px_at_85%_10%,_#4a1d2a_0%,_transparent_62%),linear-gradient(170deg,_#161016_0%,_#0f0c11_55%,_#0a090c_100%)] text-[#f2e7d5]">
         <Loader2 className="h-5 w-5 animate-spin mr-2" />
         Loading...
       </div>
@@ -1839,7 +1839,7 @@ export default function App() {
     <div
       className={`min-h-screen w-full transition-colors ${
         isDark
-          ? "bg-[radial-gradient(circle_at_top,_#2a1c12_0%,_#120f0c_45%,_#0d0b09_100%)] text-[#f2e7d5]"
+          ? "bg-[radial-gradient(1100px_520px_at_12%_8%,_#3e2748_0%,_transparent_58%),radial-gradient(900px_440px_at_88%_18%,_#4a1e28_0%,_transparent_62%),radial-gradient(700px_360px_at_50%_115%,_#2a2f5e_0%,_transparent_68%),linear-gradient(170deg,_#1b1319_0%,_#110d12_48%,_#0b090d_100%)] text-[#f2e7d5]"
           : "bg-[radial-gradient(1200px_500px_at_15%_8%,_#fff0cd_0%,_#f6e3c0_35%,_transparent_70%),radial-gradient(900px_420px_at_85%_22%,_#efd5a6_0%,_#e4c38d_40%,_transparent_72%),linear-gradient(165deg,_#f8e8c9_0%,_#edd7b2_44%,_#dcc08f_100%)] text-[#3a2b17]"
       }`}
     >
