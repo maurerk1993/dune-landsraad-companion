@@ -29,6 +29,7 @@ import {
   Loader2,
   Search,
   X,
+  Settings,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -40,9 +41,10 @@ const STORAGE_KEY = "dune_landsraad_companion_v1";
 const SHARED_TODOS_CACHE_KEY = "dune_landsraad_shared_todos_cache_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
 const APP_VERSION = "3.2.2";
-const METHOD_LANDSRAAD_BASE_URL =
-  "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
 const NEW_YORK_TIME_ZONE = "America/New_York";
+const ADMIN_EMAIL = "maurerk1993@gmail.com";
+const LOCATION_CONTENT_KEY = "global";
+const LOCATION_IMAGES_BUCKET = "landsraad-location-images";
 
 const WEEKDAY_INDEX = {
   Sun: 0,
@@ -157,46 +159,6 @@ function safeParse(json, fallback) {
     return fallback;
   }
 }
-
-function houseAnchorSlug(houseName) {
-  const HOUSE_LOCATION_ANCHORS = {
-    "House Alexin": "alexin",
-    "House Argosaz": "argosaz",
-    "House Dyvetz": "dyvetz",
-    "House Ecaz": "ecaz",
-    "House Hagal": "hagal",
-    "House Hurata": "hurata",
-    "House Imota": "imota",
-    "House Kenola": "kenola",
-    "House Lindaren": "lindaren",
-    "House Maros": "maros",
-    "House Mikarrol": "mikarrol",
-    "House Moritani": "moritani",
-    "House Mutelli": "mutelli",
-    "House Novebruns": "novebruns",
-    "House Richese": "richese",
-    "House Sor": "sor",
-    "House Spinette": "spinette",
-    "House Taligari": "taligari",
-    "House Thorvald": "thorvald",
-    "House Tseida": "tseida",
-    "House Varota": "varota",
-    "House Vernius": "vernius",
-    "House Wallach": "wallach",
-    "House Wayku": "wayku",
-    "House Wydras": "wydras",
-  };
-
-  if (HOUSE_LOCATION_ANCHORS[houseName]) {
-    return HOUSE_LOCATION_ANCHORS[houseName];
-  }
-
-  const base = houseName.toLowerCase().startsWith("house ")
-    ? houseName.slice(6)
-    : houseName;
-  return base.toLowerCase().split(" ").filter(Boolean).join("-");
-}
-
 
 function houseMapLabel(houseName) {
   const HOUSE_MAPS = {
@@ -383,6 +345,35 @@ function normalizeLandsraadHouses(houses = []) {
       pinned: Boolean(existing.pinned),
     };
   });
+}
+
+function makeDefaultHouseLocationEntries() {
+  return ALL_LANDSRAAD_HOUSES.reduce((acc, houseName) => {
+    acc[houseName] = {
+      imageUrl: "",
+      storagePath: "",
+      notes: "",
+    };
+    return acc;
+  }, {});
+}
+
+function normalizeHouseLocationEntries(entries = {}) {
+  const seeded = makeDefaultHouseLocationEntries();
+
+  if (!entries || typeof entries !== "object") {
+    return seeded;
+  }
+
+  return ALL_LANDSRAAD_HOUSES.reduce((acc, houseName) => {
+    const existing = entries[houseName];
+    acc[houseName] = {
+      imageUrl: typeof existing?.imageUrl === "string" ? existing.imageUrl : "",
+      storagePath: typeof existing?.storagePath === "string" ? existing.storagePath : "",
+      notes: typeof existing?.notes === "string" ? existing.notes : "",
+    };
+    return acc;
+  }, {});
 }
 
 function makeDefaultHouseSwatches() {
@@ -954,7 +945,15 @@ function ItemsCard({ items, setItems, isDark }) {
   );
 }
 
-function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedOnlyMode, isMobile }) {
+function LandsraadCard({
+  houses,
+  setHouses,
+  isDark,
+  trackedOnlyMode,
+  setTrackedOnlyMode,
+  isMobile,
+  onOpenLocationPopup,
+}) {
   const [rewardName, setRewardName] = useState("");
   const [requiredAmount, setRequiredAmount] = useState("");
   const [targetHouseId, setTargetHouseId] = useState("");
@@ -1279,16 +1278,16 @@ function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedO
                           Map: {houseMapLabel(h.name)}
                         </Badge>
 
-                        <a
-                          href={`${METHOD_LANDSRAAD_BASE_URL}#${houseAnchorSlug(h.name)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => onOpenLocationPopup(h.name)}
                           className={`inline-flex items-center rounded-md h-7 px-2 text-sm transition-colors cursor-pointer underline-offset-2 hover:underline ${
                             isDark ? "text-[#ccb089] hover:bg-[#2a2118]" : "text-[#7d5c31] hover:bg-[#efe1c8]"
                           }`}
                         >
                           View location
-                        </a>
+                        </Button>
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -1486,16 +1485,16 @@ function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedO
                             Map: {houseMapLabel(h.name)}
                           </Badge>
 
-                          <a
-                            href={`${METHOD_LANDSRAAD_BASE_URL}#${houseAnchorSlug(h.name)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => onOpenLocationPopup(h.name)}
                             className={`inline-flex items-center rounded-md h-7 px-2 text-sm transition-colors cursor-pointer underline-offset-2 hover:underline ${
                               isDark ? "text-[#ccb089] hover:bg-[#2a2118]" : "text-[#7d5c31] hover:bg-[#efe1c8]"
                             }`}
                           >
                             View location
-                          </a>
+                          </Button>
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -2092,12 +2091,20 @@ export default function App() {
   const [sharedTodosReady, setSharedTodosReady] = useState(false);
   const [lastSharedTodosError, setLastSharedTodosError] = useState(null);
   const [showChangeNotes, setShowChangeNotes] = useState(false);
+  const [showLocationPopup, setShowLocationPopup] = useState(false);
+  const [selectedLocationHouse, setSelectedLocationHouse] = useState(ALL_LANDSRAAD_HOUSES[0]);
+  const [showLocationAdmin, setShowLocationAdmin] = useState(false);
+  const [locationEntries, setLocationEntries] = useState(makeDefaultHouseLocationEntries());
+  const [locationEntriesReady, setLocationEntriesReady] = useState(false);
+  const [locationEntriesError, setLocationEntriesError] = useState(null);
+  const [locationUploadStateByHouse, setLocationUploadStateByHouse] = useState({});
   const [weeklyResetCountdown, setWeeklyResetCountdown] = useState(() =>
     getTimeUntilNextTuesdayMidnightEt()
   );
   const isDark = themeMode === "dark";
   const isAtreides = themeMode === "atreides";
   const isSpice = themeMode === "spice";
+  const isAdmin = (session?.user?.email || "").toLowerCase() === ADMIN_EMAIL;
 
   // Auth bootstrap
   useEffect(() => {
@@ -2263,6 +2270,52 @@ export default function App() {
     };
   }, [session?.user?.id, hydrated]);
 
+  // landsraad location popup content load (all users)
+  useEffect(() => {
+    if (!session?.user?.id || !hydrated) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("landsraad_location_content")
+          .select("entries")
+          .eq("key", LOCATION_CONTENT_KEY)
+          .maybeSingle();
+
+        if (error) throw error;
+        if (cancelled) return;
+
+        if (data?.entries && typeof data.entries === "object") {
+          setLocationEntries(normalizeHouseLocationEntries(data.entries));
+        } else {
+          const seededEntries = makeDefaultHouseLocationEntries();
+          await supabase.from("landsraad_location_content").upsert(
+            {
+              key: LOCATION_CONTENT_KEY,
+              entries: seededEntries,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "key" }
+          );
+          setLocationEntries(seededEntries);
+        }
+
+        setLocationEntriesReady(true);
+        setLocationEntriesError(null);
+      } catch (e) {
+        console.error("Landsraad location content load failed:", e?.message || e);
+        setLocationEntriesReady(true);
+        setLocationEntriesError(e?.message || "Location content load failed");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.id, hydrated]);
+
   // local autosave fallback
   useEffect(() => {
     if (!hydrated || typeof window === "undefined") return;
@@ -2386,6 +2439,30 @@ export default function App() {
     return () => clearTimeout(t);
   }, [session?.user?.id, hydrated, sharedTodosReady, sessionTodos]);
 
+  // landsraad location popup content autosave (admin edits)
+  useEffect(() => {
+    if (!session?.user?.id || !hydrated || !locationEntriesReady) return;
+
+    const t = setTimeout(async () => {
+      try {
+        await supabase.from("landsraad_location_content").upsert(
+          {
+            key: LOCATION_CONTENT_KEY,
+            entries: locationEntries,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "key" }
+        );
+        setLocationEntriesError(null);
+      } catch (e) {
+        console.error("Location content save failed:", e?.message || e);
+        setLocationEntriesError(e?.message || "Location content save failed");
+      }
+    }, 500);
+
+    return () => clearTimeout(t);
+  }, [session?.user?.id, hydrated, locationEntriesReady, locationEntries]);
+
   const exportBackup = () => {
     if (typeof window === "undefined") return;
     const payload = {
@@ -2441,6 +2518,64 @@ export default function App() {
       window.alert("Backup imported successfully.");
     };
     reader.readAsText(file);
+  };
+
+  const openLocationPopupForHouse = (houseName) => {
+    setSelectedLocationHouse(houseName);
+    setShowLocationPopup(true);
+  };
+
+  const updateLocationNotes = (houseName, notes) => {
+    setLocationEntries((prev) => ({
+      ...prev,
+      [houseName]: {
+        ...(prev[houseName] || {}),
+        notes,
+      },
+    }));
+  };
+
+  const uploadLocationImage = async (houseName, file) => {
+    if (!file || !isAdmin) return;
+
+    const slug = houseName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const extension = file.name.includes(".") ? file.name.split(".").pop() : "png";
+    const path = `${slug}/${Date.now()}.${extension}`;
+
+    setLocationUploadStateByHouse((prev) => ({ ...prev, [houseName]: { uploading: true, error: null } }));
+
+    try {
+      const previousPath = locationEntries[houseName]?.storagePath;
+
+      const { error: uploadError } = await supabase.storage
+        .from(LOCATION_IMAGES_BUCKET)
+        .upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage
+        .from(LOCATION_IMAGES_BUCKET)
+        .getPublicUrl(path);
+
+      setLocationEntries((prev) => ({
+        ...prev,
+        [houseName]: {
+          ...(prev[houseName] || {}),
+          imageUrl: publicUrlData?.publicUrl || "",
+          storagePath: path,
+        },
+      }));
+
+      if (previousPath && previousPath !== path) {
+        await supabase.storage.from(LOCATION_IMAGES_BUCKET).remove([previousPath]);
+      }
+
+      setLocationUploadStateByHouse((prev) => ({ ...prev, [houseName]: { uploading: false, error: null } }));
+    } catch (e) {
+      setLocationUploadStateByHouse((prev) => ({
+        ...prev,
+        [houseName]: { uploading: false, error: e?.message || "Upload failed" },
+      }));
+    }
   };
 
   const signOut = async () => {
@@ -2646,6 +2781,7 @@ export default function App() {
               isMobile={isMobile}
               trackedOnlyMode={trackedOnlyMode}
               setTrackedOnlyMode={setTrackedOnlyMode}
+              onOpenLocationPopup={openLocationPopupForHouse}
             />
           </TabsContent>
 
@@ -2669,19 +2805,38 @@ export default function App() {
       </div>
 
       <div className="fixed bottom-3 right-4 flex flex-col items-end gap-2">
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => setShowChangeNotes(true)}
-          className={
-            isDark
-              ? "h-7 px-2 text-[11px] border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#d7c19d]"
-              : "h-7 px-2 text-[11px] border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
-          }
-        >
-          Change Notes
-        </Button>
+        <div className="flex items-center gap-1">
+          {isAdmin ? (
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              onClick={() => setShowLocationAdmin(true)}
+              className={
+                isDark
+                  ? "h-7 w-7 border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#d7c19d]"
+                  : "h-7 w-7 border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
+              }
+              title="Landsraad location admin"
+            >
+              <Settings className="h-3.5 w-3.5" />
+            </Button>
+          ) : null}
+
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setShowChangeNotes(true)}
+            className={
+              isDark
+                ? "h-7 px-2 text-[11px] border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#d7c19d]"
+                : "h-7 px-2 text-[11px] border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
+            }
+          >
+            Change Notes
+          </Button>
+        </div>
 
         <div
           className={`text-xs font-medium tracking-wide ${
@@ -2734,6 +2889,151 @@ export default function App() {
                   </ul>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {showLocationPopup ? (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4">
+          <div
+            className={`w-full max-w-3xl rounded-2xl border p-4 sm:p-5 max-h-[85vh] overflow-y-auto ${
+              isDark
+                ? "bg-[#1a140f] border-[#5a452a] text-[#f2e7d5]"
+                : "bg-[#fff8ec] border-[#c9a878] text-[#3a2b17]"
+            }`}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-sm sm:text-base font-semibold">{selectedLocationHouse} Location</h3>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setShowLocationPopup(false)}
+                className={
+                  isDark
+                    ? "border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#e6d0ac]"
+                    : "border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
+                }
+              >
+                Close
+              </Button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {locationEntries[selectedLocationHouse]?.imageUrl ? (
+                <img
+                  src={locationEntries[selectedLocationHouse].imageUrl}
+                  alt={`${selectedLocationHouse} representative location`}
+                  className="w-full rounded-xl border border-[#7a6342]/40"
+                />
+              ) : (
+                <div
+                  className={`rounded-lg border border-dashed p-5 text-sm ${
+                    isDark ? "border-[#4a3a25] text-[#a79274]" : "border-[#caa779] text-[#7a6342]"
+                  }`}
+                >
+                  Under Construction! Coming soon
+                </div>
+              )}
+
+              {locationEntries[selectedLocationHouse]?.notes ? (
+                <p className={`text-sm ${isDark ? "text-[#d9c6a6]" : "text-[#6d4f27]"}`}>
+                  {locationEntries[selectedLocationHouse].notes}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {showLocationAdmin && isAdmin ? (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4">
+          <div
+            className={`w-full max-w-4xl rounded-2xl border p-4 sm:p-5 max-h-[85vh] overflow-y-auto ${
+              isDark
+                ? "bg-[#1a140f] border-[#5a452a] text-[#f2e7d5]"
+                : "bg-[#fff8ec] border-[#c9a878] text-[#3a2b17]"
+            }`}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-sm sm:text-base font-semibold">Landsraad Location Admin</h3>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setShowLocationAdmin(false)}
+                className={
+                  isDark
+                    ? "border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#e6d0ac]"
+                    : "border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
+                }
+              >
+                Close
+              </Button>
+            </div>
+
+            <p className={`mt-2 text-xs ${isDark ? "text-[#c8bca7]" : "text-[#7a6342]"}`}>
+              Upload map screenshots and optional notes shown in the View Location popup.
+            </p>
+            {locationEntriesError ? (
+              <p className={`mt-2 text-xs ${isDark ? "text-amber-300" : "text-amber-700"}`}>
+                Sync warning: {locationEntriesError}
+              </p>
+            ) : null}
+
+            <div className="mt-4 space-y-3">
+              {ALL_LANDSRAAD_HOUSES.map((houseName) => {
+                const uploadState = locationUploadStateByHouse[houseName] || {};
+                return (
+                  <div
+                    key={houseName}
+                    className={`rounded-lg border p-3 ${
+                      isDark ? "border-[#4a3a25] bg-[#211910]" : "border-[#d8bc91] bg-[#fff3df]"
+                    }`}
+                  >
+                    <p className="text-sm font-semibold">{houseName}</p>
+
+                    <div className="mt-2 space-y-2">
+                      <Label className={`text-xs ${isDark ? "text-[#ceb89a]" : "text-[#6b5636]"}`}>
+                        Location image
+                      </Label>
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => uploadLocationImage(houseName, e.target.files?.[0])}
+                        className={
+                          isDark
+                            ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]"
+                            : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"
+                        }
+                      />
+                      {uploadState.uploading ? (
+                        <p className={`text-xs ${isDark ? "text-[#d8c3a1]" : "text-[#6d4f27]"}`}>Uploading...</p>
+                      ) : null}
+                      {uploadState.error ? (
+                        <p className={`text-xs ${isDark ? "text-rose-300" : "text-rose-700"}`}>{uploadState.error}</p>
+                      ) : null}
+                    </div>
+
+                    <div className="mt-3 space-y-2">
+                      <Label className={`text-xs ${isDark ? "text-[#ceb89a]" : "text-[#6b5636]"}`}>
+                        Popup notes
+                      </Label>
+                      <textarea
+                        value={locationEntries[houseName]?.notes || ""}
+                        onChange={(e) => updateLocationNotes(houseName, e.target.value)}
+                        rows={3}
+                        className={`w-full rounded-md border px-3 py-2 text-sm ${
+                          isDark
+                            ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]"
+                            : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"
+                        }`}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
