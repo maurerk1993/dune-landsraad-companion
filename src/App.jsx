@@ -40,7 +40,7 @@ function uid() {
 
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const SHARED_TODOS_CACHE_KEY = "dune_landsraad_shared_todos_cache_v1";
-const APP_VERSION = "3.3.0";
+const APP_VERSION = "3.4.0";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -56,6 +56,13 @@ const WEEKDAY_INDEX = {
 };
 
 const APP_CHANGE_NOTES = [
+  {
+    version: "3.4.0",
+    notes: [
+      "Removed Dune Tools from tab navigation and kept it only as a separate header-button page.",
+      "Added this version bump to ensure deployments clearly pick up the nav-bar removal fix.",
+    ],
+  },
   {
     version: "3.3.0",
     notes: [
