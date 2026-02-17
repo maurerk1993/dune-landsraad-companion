@@ -36,7 +36,7 @@ function uid() {
 
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "1.3.0";
+const APP_VERSION = "1.4.0";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -96,6 +96,18 @@ function houseAnchorSlug(houseName) {
     ? houseName.slice(6)
     : houseName;
   return base.toLowerCase().split(" ").filter(Boolean).join("-");
+}
+
+
+function houseMapLabel(houseName) {
+  const HOUSE_MAPS = {
+    "House Alexin": "Harko Village",
+    "House Varota": "Arakeen",
+    "House Wallach": "Arakeen",
+    "House Wayku": "Deep Desert",
+  };
+
+  return HOUSE_MAPS[houseName] || "Hagga Basin";
 }
 
 function getTimeZoneOffsetMs(date, timeZone) {
@@ -983,6 +995,16 @@ function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedO
                           }
                         >
                           Goals: {doneCount}/{h.goals.length}
+                        </Badge>
+
+                        <Badge
+                          className={
+                            isDark
+                              ? "bg-emerald-950/40 text-emerald-300 border border-emerald-800"
+                              : "bg-emerald-50 text-emerald-800 border border-emerald-400"
+                          }
+                        >
+                          Map: {houseMapLabel(h.name)}
                         </Badge>
 
                         <a
