@@ -39,7 +39,7 @@ function uid() {
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const SHARED_TODOS_CACHE_KEY = "dune_landsraad_shared_todos_cache_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "3.0.0";
+const APP_VERSION = "3.1.0";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -55,6 +55,14 @@ const WEEKDAY_INDEX = {
 };
 
 const APP_CHANGE_NOTES = [
+  {
+    version: "3.1.0",
+    notes: [
+      "Added new Spice theme with a light-purple UI and sand-toned background.",
+      "Updated Atreides theme to a darker green palette for lower eye strain.",
+      "Renamed Swatches core badge text to Landsraad reward.",
+    ],
+  },
   {
     version: "3.0.0",
     notes: ["Change Notes now shows the latest 10 revisions in a scrollable list."],
@@ -423,6 +431,7 @@ function makeDefaultState() {
 function cycleThemeMode(current) {
   if (current === "dark") return "light";
   if (current === "light") return "atreides";
+  if (current === "atreides") return "spice";
   return "dark";
 }
 
@@ -1842,7 +1851,7 @@ function HouseSwatchesCard({ swatches, setSwatches, isDark }) {
                         : "bg-[#efe1c8] text-[#7b6342] border border-[#d8bc91]"
                     }
                   >
-                    Core
+                    Landsraad reward
                   </Badge>
                 )}
               </div>
@@ -1866,7 +1875,7 @@ function HouseSwatchesCard({ swatches, setSwatches, isDark }) {
   );
 }
 
-function AuthGate({ onSignedIn, isDark, isAtreides }) {
+function AuthGate({ onSignedIn, isDark, isAtreides, isSpice }) {
   const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -1905,9 +1914,11 @@ function AuthGate({ onSignedIn, isDark, isAtreides }) {
         isDark
           ? "bg-[radial-gradient(1100px_520px_at_12%_8%,_#3e2748_0%,_transparent_58%),radial-gradient(900px_440px_at_88%_18%,_#4a1e28_0%,_transparent_62%),radial-gradient(700px_360px_at_50%_115%,_#2a2f5e_0%,_transparent_68%),linear-gradient(170deg,_#1b1319_0%,_#110d12_48%,_#0b090d_100%)] text-[#f2e7d5]"
           : isAtreides
-            ? "bg-[radial-gradient(900px_420px_at_18%_10%,_#d9efe1_0%,_transparent_60%),radial-gradient(780px_420px_at_82%_20%,_#bfd9c3_0%,_transparent_65%),linear-gradient(165deg,_#e7efe8_0%,_#d6e4d8_45%,_#bfceb9_100%)] text-[#243229]"
-            : "bg-[radial-gradient(900px_440px_at_20%_6%,_#cfb5ef_0%,_transparent_62%),radial-gradient(1200px_500px_at_15%_8%,_#fff0cd_0%,_#f6e3c0_35%,_transparent_70%),radial-gradient(900px_420px_at_85%_22%,_#efd5a6_0%,_#e4c38d_40%,_transparent_72%),linear-gradient(165deg,_#f8e8c9_0%,_#edd7b2_44%,_#dcc08f_100%)] text-[#3a2b17]"
-      } ${isAtreides ? "theme-atreides" : ""}`}
+            ? "bg-[radial-gradient(920px_420px_at_16%_10%,_#95b09a_0%,_transparent_62%),radial-gradient(780px_420px_at_82%_20%,_#7c9f86_0%,_transparent_66%),linear-gradient(165deg,_#213a2f_0%,_#1b3128_46%,_#162920_100%)] text-[#e1efe6]"
+            : isSpice
+              ? "bg-[radial-gradient(900px_420px_at_18%_8%,_#c79ce8_0%,_transparent_62%),radial-gradient(900px_420px_at_84%_20%,_#a97ad8_0%,_transparent_66%),linear-gradient(165deg,_#d4b88f_0%,_#c8a674_50%,_#ba9662_100%)] text-[#311e45]"
+              : "bg-[radial-gradient(900px_440px_at_20%_6%,_#cfb5ef_0%,_transparent_62%),radial-gradient(1200px_500px_at_15%_8%,_#fff0cd_0%,_#f6e3c0_35%,_transparent_70%),radial-gradient(900px_420px_at_85%_22%,_#efd5a6_0%,_#e4c38d_40%,_transparent_72%),linear-gradient(165deg,_#f8e8c9_0%,_#edd7b2_44%,_#dcc08f_100%)] text-[#3a2b17]"
+      } ${isAtreides ? "theme-atreides" : isSpice ? "theme-spice" : ""}`}
     >
       <Card
         className={`w-full max-w-md rounded-2xl border ${
@@ -2044,6 +2055,7 @@ export default function App() {
   );
   const isDark = themeMode === "dark";
   const isAtreides = themeMode === "atreides";
+  const isSpice = themeMode === "spice";
 
   // Auth bootstrap
   useEffect(() => {
@@ -2405,7 +2417,7 @@ export default function App() {
   }
 
   if (!session) {
-    return <AuthGate onSignedIn={setSession} isDark={isDark} isAtreides={isAtreides} />;
+    return <AuthGate onSignedIn={setSession} isDark={isDark} isAtreides={isAtreides} isSpice={isSpice} />;
   }
 
   return (
@@ -2414,9 +2426,11 @@ export default function App() {
         isDark
           ? "bg-[radial-gradient(1100px_520px_at_12%_8%,_#3e2748_0%,_transparent_58%),radial-gradient(900px_440px_at_88%_18%,_#4a1e28_0%,_transparent_62%),radial-gradient(700px_360px_at_50%_115%,_#2a2f5e_0%,_transparent_68%),linear-gradient(170deg,_#1b1319_0%,_#110d12_48%,_#0b090d_100%)] text-[#f2e7d5]"
           : isAtreides
-            ? "bg-[radial-gradient(950px_420px_at_18%_8%,_#d9efe1_0%,_transparent_63%),radial-gradient(900px_420px_at_85%_20%,_#bfdac8_0%,_transparent_66%),linear-gradient(165deg,_#e6efe8_0%,_#d4e1d4_46%,_#bdcbbd_100%)] text-[#233227]"
-            : "bg-[radial-gradient(900px_440px_at_20%_6%,_#cfb5ef_0%,_transparent_62%),radial-gradient(1200px_500px_at_15%_8%,_#fff0cd_0%,_#f6e3c0_35%,_transparent_70%),radial-gradient(900px_420px_at_85%_22%,_#efd5a6_0%,_#e4c38d_40%,_transparent_72%),linear-gradient(165deg,_#f8e8c9_0%,_#edd7b2_44%,_#dcc08f_100%)] text-[#3a2b17]"
-      } ${isAtreides ? "theme-atreides" : ""}`}
+            ? "bg-[radial-gradient(980px_420px_at_16%_8%,_#94b09a_0%,_transparent_64%),radial-gradient(900px_420px_at_85%_20%,_#7b9f89_0%,_transparent_66%),linear-gradient(165deg,_#213a2f_0%,_#1b3128_48%,_#162920_100%)] text-[#e1efe6]"
+            : isSpice
+              ? "bg-[radial-gradient(950px_420px_at_18%_8%,_#cd9ff0_0%,_transparent_64%),radial-gradient(900px_420px_at_85%_20%,_#ab7cd8_0%,_transparent_66%),linear-gradient(165deg,_#d1b389_0%,_#c39f6c_46%,_#b58f59_100%)] text-[#2f1a42]"
+              : "bg-[radial-gradient(900px_440px_at_20%_6%,_#cfb5ef_0%,_transparent_62%),radial-gradient(1200px_500px_at_15%_8%,_#fff0cd_0%,_#f6e3c0_35%,_transparent_70%),radial-gradient(900px_420px_at_85%_22%,_#efd5a6_0%,_#e4c38d_40%,_transparent_72%),linear-gradient(165deg,_#f8e8c9_0%,_#edd7b2_44%,_#dcc08f_100%)] text-[#3a2b17]"
+      } ${isAtreides ? "theme-atreides" : isSpice ? "theme-spice" : ""}`}
     >
       <div className="mx-auto max-w-7xl p-4 md:p-8 space-y-6">
         <motion.div
@@ -2426,8 +2440,10 @@ export default function App() {
             isDark
               ? "bg-[#18130e]/85 border-[#5a452a] shadow-[#00000066]"
               : isAtreides
-                ? "bg-[#ecf4ea]/90 border-[#8ea893] shadow-[#50705655]"
-                : "bg-[#fff4df]/90 border-[#c9a878] shadow-[#9b7a4555]"
+                ? "bg-[#1e352b]/90 border-[#5d8068] shadow-[#13271f88]"
+                : isSpice
+                  ? "bg-[#dec1ee]/88 border-[#8f69b1] shadow-[#5e3c7f66]"
+                  : "bg-[#fff4df]/90 border-[#c9a878] shadow-[#9b7a4555]"
           }`}
         >
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -2435,7 +2451,7 @@ export default function App() {
               <h1 className="text-2xl md:text-4xl font-bold tracking-tight">
                 Dune Awakening: Landsraad Companion
               </h1>
-              <p className={`text-sm md:text-base max-w-2xl ${isDark ? "text-[#c8bca7]" : "text-[#6b5636]"}`}>
+              <p className={`text-sm md:text-base max-w-2xl ${isDark ? "text-[#c8bca7]" : isAtreides ? "text-[#bcd1c4]" : isSpice ? "text-[#55356f]" : "text-[#6b5636]"}`}>
                 Command center for Great House goals, weekly strategy, and Landsraad cycle planning.
               </p>
 
@@ -2477,7 +2493,7 @@ export default function App() {
             </div>
 
             <div className="flex flex-col items-start md:items-end gap-2">
-              <div className={`text-xs ${isDark ? "text-[#c8bca7]" : "text-[#6b5636]"}`}>
+              <div className={`text-xs ${isDark ? "text-[#c8bca7]" : isAtreides ? "text-[#c4d8cc]" : isSpice ? "text-[#5d3a79]" : "text-[#6b5636]"}`}>
                 Signed in as <span className="font-semibold">{session.user.email}</span>
               </div>
 
@@ -2489,12 +2505,14 @@ export default function App() {
                     isDark
                       ? "border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#e6d0ac]"
                       : isAtreides
-                        ? "border-[#7b9681] bg-[#dce9dc] hover:bg-[#cddfcd] text-[#2e4935]"
-                        : "border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
+                        ? "border-[#6b8d76] bg-[#294336] hover:bg-[#355345] text-[#d8ebdf]"
+                        : isSpice
+                          ? "border-[#8f69b1] bg-[#d7b5ea] hover:bg-[#c9a0e0] text-[#3f2459]"
+                          : "border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
                   }
                 >
                   {isDark ? <Sun className="h-4 w-4 mr-2" /> : <Moon className="h-4 w-4 mr-2" />}
-                  {isDark ? "Theme: Dark" : isAtreides ? "Theme: Atreides" : "Theme: Light"}
+                  {isDark ? "Theme: Dark" : isAtreides ? "Theme: Atreides" : isSpice ? "Theme: Spice" : "Theme: Light"}
                 </Button>
 
                 <Button
@@ -2503,7 +2521,11 @@ export default function App() {
                   className={
                     isDark
                       ? "border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#e6d0ac]"
-                      : "border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
+                      : isAtreides
+                        ? "border-[#6b8d76] bg-[#294336] hover:bg-[#355345] text-[#d8ebdf]"
+                        : isSpice
+                          ? "border-[#8f69b1] bg-[#d7b5ea] hover:bg-[#c9a0e0] text-[#3f2459]"
+                          : "border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
                   }
                 >
                   <LogOut className="h-4 w-4 mr-2" />
@@ -2511,14 +2533,14 @@ export default function App() {
                 </Button>
               </div>
 
-              <div className={`text-xs ${isDark ? "text-[#a79274]" : "text-[#7a6342]"}`}>
+              <div className={`text-xs ${isDark ? "text-[#a79274]" : isAtreides ? "text-[#b6cabc]" : isSpice ? "text-[#654282]" : "text-[#7a6342]"}`}>
                 {!cloudReady
                   ? "Initializing cloud sync..."
                   : cloudSaving
                     ? "Saving to cloud..."
                     : "Cloud sync active"}
               </div>
-              <div className={`text-[11px] ${isDark ? "text-[#947d5e]" : "text-[#846742]"}`}>
+              <div className={`text-[11px] ${isDark ? "text-[#947d5e]" : isAtreides ? "text-[#a8bfb0]" : isSpice ? "text-[#6d458b]" : "text-[#846742]"}`}>
                 {lastCloudError
                   ? `Sync issue: ${lastCloudError}`
                   : lastCloudSaveAt
@@ -2530,13 +2552,17 @@ export default function App() {
                 className={`rounded-xl border px-3 py-2 text-xs min-w-[220px] ${
                   isDark
                     ? "border-[#4a3a25] bg-[#1b1510] text-[#e6d0ac]"
-                    : "border-[#c9a878] bg-[#f7ead2] text-[#6d4f27]"
+                    : isAtreides
+                      ? "border-[#6b8d76] bg-[#294336] text-[#d9ece0]"
+                      : isSpice
+                        ? "border-[#8f69b1] bg-[#d7b5ea] text-[#3f2459]"
+                        : "border-[#c9a878] bg-[#f7ead2] text-[#6d4f27]"
                 }`}
               >
                 <div className="flex items-center gap-2 font-semibold">
                   <Clock3 className="h-3.5 w-3.5" /> Weekly Reset (Tue 12:00 AM EST)
                 </div>
-                <div className={`${isDark ? "text-[#c8bca7]" : "text-[#7a6342]"}`}>
+                <div className={`${isDark ? "text-[#c8bca7]" : isAtreides ? "text-[#b9cfc0]" : isSpice ? "text-[#5f3e7a]" : "text-[#7a6342]"}`}>
                   {formatCountdown(weeklyResetCountdown)}
                 </div>
               </div>
@@ -2554,8 +2580,10 @@ export default function App() {
               isDark
                 ? "bg-[#18130e]/85 border-[#5a452a] shadow-[#00000066]"
                 : isAtreides
-                  ? "bg-[#e8f1e8]/95 border-[#8ea893] shadow-[#50705655]"
-                  : "bg-[#fff3dc]/95 border-[#c9a878] shadow-[#9b7a4555]"
+                  ? "bg-[#22392e]/95 border-[#5d8068] shadow-[#12261f88]"
+                  : isSpice
+                    ? "bg-[#dab9eb]/92 border-[#8f69b1] shadow-[#54357466]"
+                    : "bg-[#fff3dc]/95 border-[#c9a878] shadow-[#9b7a4555]"
             }`}
           >
             <TabsTrigger value="coop" className={`rounded-xl gap-2 ${isMobile ? "shrink-0" : ""}`}>
