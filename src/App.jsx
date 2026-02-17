@@ -32,6 +32,8 @@ import {
   Settings,
   Pencil,
   EyeOff,
+  Wrench,
+  ExternalLink,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -42,7 +44,7 @@ function uid() {
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const SHARED_TODOS_CACHE_KEY = "dune_landsraad_shared_todos_cache_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "3.3.0";
+const APP_VERSION = "3.4.0";
 const NEW_YORK_TIME_ZONE = "America/New_York";
 const ADMIN_EMAIL = "maurerk1993@gmail.com";
 const LOCATION_CONTENT_KEY = "global";
@@ -59,6 +61,14 @@ const WEEKDAY_INDEX = {
 };
 
 const APP_CHANGE_NOTES = [
+  {
+    version: "3.4.0",
+    notes: [
+      "Added click-outside close behavior to View Location popups while keeping the Close button.",
+      "Added a new Dune Tools page entry point below the app title for quick access.",
+      "Added admin-managed Dune Tools links with shared name, URL, and notes visible to all users.",
+    ],
+  },
   {
     version: "3.3.0",
     notes: [
@@ -399,6 +409,44 @@ function normalizeFarmSources(sources = []) {
   ).sort((a, b) => a.localeCompare(b));
 }
 
+function makeDefaultDuneTools() {
+  return [
+    {
+      id: uid(),
+      name: "Dune: Awakening Intel Map",
+      url: "https://duneawakeningtracker.com/",
+      notes: "Interactive map and community tracking resources.",
+    },
+    {
+      id: uid(),
+      name: "Dune: Awakening Database",
+      url: "https://awakening.wiki/",
+      notes: "Guides, references, and item information.",
+    },
+  ];
+}
+
+function normalizeDuneTools(tools = []) {
+  if (!Array.isArray(tools)) return makeDefaultDuneTools();
+
+  const normalized = tools
+    .map((tool) => {
+      const name = String(tool?.name || "").trim();
+      const url = String(tool?.url || "").trim();
+      const notes = String(tool?.notes || "").trim();
+      if (!name || !url) return null;
+      return {
+        id: String(tool?.id || uid()),
+        name,
+        url,
+        notes,
+      };
+    })
+    .filter(Boolean);
+
+  return normalized.length > 0 ? normalized : makeDefaultDuneTools();
+}
+
 function makeDefaultHouseSwatches() {
   return ALL_LANDSRAAD_HOUSES.map((houseName) => ({
     id: uid(),
@@ -461,6 +509,7 @@ function makeDefaultState() {
     landsraadHouses: makeDefaultHouses(),
     houseSwatches: makeDefaultHouseSwatches(),
     trackedOnlyMode: false,
+    duneTools: makeDefaultDuneTools(),
   };
 }
 
@@ -2238,6 +2287,84 @@ function HouseSwatchesCard({ swatches, setSwatches, isDark }) {
   );
 }
 
+
+function DuneToolsCard({ isDark, isAdmin, tools, setTools }) {
+  const [nameInput, setNameInput] = useState("");
+  const [urlInput, setUrlInput] = useState("");
+  const [notesInput, setNotesInput] = useState("");
+
+  const addTool = () => {
+    const name = nameInput.trim();
+    const url = urlInput.trim();
+    const notes = notesInput.trim();
+    if (!name || !url) return;
+
+    setTools((prev) => [...prev, { id: uid(), name, url, notes }]);
+    setNameInput("");
+    setUrlInput("");
+    setNotesInput("");
+  };
+
+  const removeTool = (id) => {
+    setTools((prev) => prev.filter((tool) => tool.id !== id));
+  };
+
+  return (
+    <Card className={`rounded-2xl border ${isDark ? "bg-[#17120d] border-[#4a3a25]" : "bg-[#fff9ef] border-[#d8bc91]"}`}>
+      <CardHeader>
+        <SectionHeader
+          icon={Wrench}
+          title="Dune Tools"
+          subtitle="Shared links for useful Dune Awakening resources."
+          isDark={isDark}
+        />
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isAdmin ? (
+          <div className={`rounded-xl border p-3 space-y-2 ${isDark ? "border-[#4a3a25] bg-[#211910]" : "border-[#d8bc91] bg-[#fff3df]"}`}>
+            <p className={`text-xs ${isDark ? "text-[#c8bca7]" : "text-[#7a6342]"}`}>
+              Admin mode: Add, remove, and annotate tools for everyone.
+            </p>
+            <Input value={nameInput} onChange={(e) => setNameInput(e.target.value)} placeholder="Tool name" className={isDark ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]" : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"} />
+            <Input value={urlInput} onChange={(e) => setUrlInput(e.target.value)} placeholder="https://..." className={isDark ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]" : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"} />
+            <textarea
+              value={notesInput}
+              onChange={(e) => setNotesInput(e.target.value)}
+              rows={2}
+              placeholder="Quick notes"
+              className={`w-full rounded-md border px-3 py-2 text-sm ${isDark ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]" : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"}`}
+            />
+            <Button onClick={addTool} className={isDark ? "gap-2 bg-[#c48a3a] hover:bg-[#d59a48] text-[#1a1208]" : "gap-2 bg-[#a56b2c] hover:bg-[#8d5821] text-[#fff4de]"}>
+              <Plus className="h-4 w-4" /> Add Tool
+            </Button>
+          </div>
+        ) : null}
+
+        <div className="space-y-3">
+          {tools.map((tool) => (
+            <div key={tool.id} className={`rounded-xl border p-3 ${isDark ? "border-[#3f3124] bg-[#1b1510]" : "border-[#d8bc91] bg-[#fff7e8]"}`}>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="font-semibold text-sm">{tool.name}</p>
+                  <a href={tool.url} target="_blank" rel="noreferrer" className={`mt-1 inline-flex items-center gap-1 text-xs underline ${isDark ? "text-[#d9c6a6]" : "text-[#7a4e1e]"}`}>
+                    Open link <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+                {isAdmin ? (
+                  <Button variant="ghost" size="icon" onClick={() => removeTool(tool.id)} className={isDark ? "text-[#ccb089] hover:bg-[#2a2118]" : "text-[#7d5c31] hover:bg-[#efe1c8]"}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                ) : null}
+              </div>
+              {tool.notes ? <p className={`mt-2 text-xs ${isDark ? "text-[#b9a383]" : "text-[#6b5636]"}`}>{tool.notes}</p> : null}
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function AuthGate({ onSignedIn, isDark, isAtreides, isSpice }) {
   const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
@@ -2409,6 +2536,8 @@ export default function App() {
   const [landsraadHouses, setLandsraadHouses] = useState(defaults.landsraadHouses);
   const [houseSwatches, setHouseSwatches] = useState(defaults.houseSwatches);
   const [trackedOnlyMode, setTrackedOnlyMode] = useState(defaults.trackedOnlyMode);
+  const [duneTools, setDuneTools] = useState(defaults.duneTools);
+  const [activeTab, setActiveTab] = useState("landsraad");
   const [lastCloudSaveAt, setLastCloudSaveAt] = useState(null);
   const [lastCloudError, setLastCloudError] = useState(null);
   const [sharedTodosReady, setSharedTodosReady] = useState(false);
@@ -2477,6 +2606,7 @@ export default function App() {
       }
       if (Array.isArray(saved.houseSwatches)) setHouseSwatches(normalizeHouseSwatches(saved.houseSwatches));
       if (typeof saved.trackedOnlyMode === "boolean") setTrackedOnlyMode(saved.trackedOnlyMode);
+      if (Array.isArray(saved.duneTools)) setDuneTools(normalizeDuneTools(saved.duneTools));
     }
 
     if (Array.isArray(sharedTodosCache)) {
@@ -2607,7 +2737,7 @@ export default function App() {
       try {
         const { data, error } = await supabase
           .from("landsraad_location_content")
-          .select("entries,farm_sources")
+          .select("entries,farm_sources,dune_tools")
           .eq("key", LOCATION_CONTENT_KEY)
           .maybeSingle();
 
@@ -2617,20 +2747,24 @@ export default function App() {
         if (data?.entries && typeof data.entries === "object") {
           setLocationEntries(normalizeHouseLocationEntries(data.entries));
           setFarmSources(normalizeFarmSources(data.farm_sources));
+          setDuneTools(normalizeDuneTools(data.dune_tools));
         } else {
           const seededEntries = makeDefaultHouseLocationEntries();
           const seededFarmSources = normalizeFarmSources(defaults.farmSources);
+          const seededDuneTools = normalizeDuneTools(defaults.duneTools);
           await supabase.from("landsraad_location_content").upsert(
             {
               key: LOCATION_CONTENT_KEY,
               entries: seededEntries,
               farm_sources: seededFarmSources,
+              dune_tools: seededDuneTools,
               updated_at: new Date().toISOString(),
             },
             { onConflict: "key" }
           );
           setLocationEntries(seededEntries);
           setFarmSources(seededFarmSources);
+          setDuneTools(seededDuneTools);
         }
 
         setLocationEntriesReady(true);
@@ -2662,6 +2796,7 @@ export default function App() {
         landsraadHouses,
         houseSwatches,
         trackedOnlyMode,
+        duneTools,
       })
     );
   }, [
@@ -2675,6 +2810,7 @@ export default function App() {
     landsraadHouses,
     houseSwatches,
     trackedOnlyMode,
+    duneTools,
   ]);
 
   // local cache for shared to-do fallback/migration
@@ -2785,6 +2921,7 @@ export default function App() {
             key: LOCATION_CONTENT_KEY,
             entries: locationEntries,
             farm_sources: normalizeFarmSources(farmSources),
+            dune_tools: normalizeDuneTools(duneTools),
             updated_at: new Date().toISOString(),
           },
           { onConflict: "key" }
@@ -2797,7 +2934,7 @@ export default function App() {
     }, 500);
 
     return () => clearTimeout(t);
-  }, [session?.user?.id, hydrated, locationEntriesReady, locationEntries, farmSources]);
+  }, [session?.user?.id, hydrated, locationEntriesReady, locationEntries, farmSources, duneTools]);
 
   const exportBackup = () => {
     if (typeof window === "undefined") return;
@@ -2987,6 +3124,22 @@ export default function App() {
               <p className={`text-sm md:text-base max-w-2xl ${isDark ? "text-[#c8bca7]" : isAtreides ? "text-[#bcd1c4]" : isSpice ? "text-[#55356f]" : "text-[#6b5636]"}`}>
                 Command center for Great House goals, weekly strategy, and Landsraad cycle planning.
               </p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setActiveTab("dune-tools")}
+                className={
+                  isDark
+                    ? "w-fit border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#e6d0ac]"
+                    : isAtreides
+                      ? "w-fit border-[#6b8d76] bg-[#294336] hover:bg-[#355345] text-[#d8ebdf]"
+                      : isSpice
+                        ? "w-fit border-[#8f69b1] bg-[#d7b5ea] hover:bg-[#c9a0e0] text-[#3f2459]"
+                        : "w-fit border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
+                }
+              >
+                <Wrench className="h-4 w-4 mr-2" /> Dune Tools
+              </Button>
 
             </div>
 
@@ -3068,7 +3221,7 @@ export default function App() {
           </div>
         </motion.div>
 
-        <Tabs defaultValue="landsraad" className="space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList
             className={`${
               isMobile
@@ -3155,6 +3308,10 @@ export default function App() {
               placeholder="e.g., Clean stash / sort schematics"
               isDark={isDark}
             />
+          </TabsContent>
+
+          <TabsContent value="dune-tools">
+            <DuneToolsCard isDark={isDark} isAdmin={isAdmin} tools={duneTools} setTools={setDuneTools} />
           </TabsContent>
 
         </Tabs>
@@ -3251,8 +3408,9 @@ export default function App() {
       ) : null}
 
       {showLocationPopup ? (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4" onClick={() => setShowLocationPopup(false)}>
           <div
+            onClick={(e) => e.stopPropagation()}
             className={`w-full max-w-3xl rounded-2xl border p-4 sm:p-5 max-h-[85vh] overflow-y-auto ${
               isDark
                 ? "bg-[#1a140f] border-[#5a452a] text-[#f2e7d5]"
