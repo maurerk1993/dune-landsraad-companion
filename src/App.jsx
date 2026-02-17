@@ -36,7 +36,7 @@ function uid() {
 
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "1.9.0";
+const APP_VERSION = "2.0.0";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -226,6 +226,12 @@ const ALL_LANDSRAAD_HOUSES = [
   "House Wydras",
 ];
 
+function coerceHouseCurrent(value) {
+  if (value === "") return "";
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
 function makeDefaultHouses() {
   return ALL_LANDSRAAD_HOUSES.map((name) => ({
     id: uid(),
@@ -234,6 +240,30 @@ function makeDefaultHouses() {
     goals: [],
     pinned: false,
   }));
+}
+
+function normalizeLandsraadHouses(houses = []) {
+  const seeded = makeDefaultHouses();
+  const existingByName = new Map(
+    houses
+      .filter((house) => house && typeof house.name === "string")
+      .map((house) => [house.name, house])
+  );
+
+  return seeded.map((seed) => {
+    const existing = existingByName.get(seed.name);
+    if (!existing) return seed;
+
+    return {
+      ...seed,
+      ...existing,
+      id: existing.id || seed.id,
+      name: seed.name,
+      current: coerceHouseCurrent(existing.current),
+      goals: Array.isArray(existing.goals) ? existing.goals : [],
+      pinned: Boolean(existing.pinned),
+    };
+  });
 }
 
 function makeDefaultHouseSwatches() {
@@ -832,15 +862,16 @@ function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedO
   const togglePinned = (id) =>
     setHouses(houses.map((h) => (h.id === id ? { ...h, pinned: !h.pinned } : h)));
 
-  const removeHouse = (id) => {
-    setHouses(houses.filter((h) => h.id !== id));
-    if (targetHouseId === id) setTargetHouseId("");
-  };
-
   const updateCurrent = (id, value) => {
-    const n = Number(value);
     setHouses(
-      houses.map((h) => (h.id === id ? { ...h, current: Number.isFinite(n) ? n : 0 } : h))
+      houses.map((h) =>
+        h.id === id
+          ? {
+              ...h,
+              current: value === "" ? "" : coerceHouseCurrent(value),
+            }
+          : h
+      )
     );
   };
 
@@ -1172,23 +1203,14 @@ function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedO
                           }`}
                         />
 
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeHouse(h.id)}
-                          className={
-                            isDark ? "text-[#ccb089] hover:bg-[#2a2118]" : "text-[#7d5c31] hover:bg-[#efe1c8]"
-                          }
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
                       </div>
                     </div>
 
                     <div className="space-y-2">
                       {h.goals.map((g) => {
-                        const remaining = Math.max(g.required - h.current, 0);
-                        const projectedPct = g.required > 0 ? Math.min(100, Math.round((h.current / g.required) * 100)) : 0;
+                        const currentAmount = Number(h.current) || 0;
+                        const remaining = Math.max(g.required - currentAmount, 0);
+                        const projectedPct = g.required > 0 ? Math.min(100, Math.round((currentAmount / g.required) * 100)) : 0;
 
                         return (
                           <div
@@ -1337,6 +1359,8 @@ function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedO
 
 function HouseSwatchesCard({ swatches, setSwatches, isDark }) {
   const [swatchText, setSwatchText] = useState("");
+  const [swatchSearch, setSwatchSearch] = useState("");
+  const [swatchFilterMode, setSwatchFilterMode] = useState("all");
 
   const addSwatch = () => {
     const text = swatchText.trim();
@@ -1349,6 +1373,16 @@ function HouseSwatchesCard({ swatches, setSwatches, isDark }) {
     setSwatches(swatches.map((s) => (s.id === id ? { ...s, done: !s.done } : s)));
 
   const removeSwatch = (id) => setSwatches(swatches.filter((s) => s.id !== id));
+
+  const searchedSwatches = swatches.filter((swatch) =>
+    swatch.text.toLowerCase().includes(swatchSearch.trim().toLowerCase())
+  );
+
+  const visibleSwatches = searchedSwatches.filter((swatch) => {
+    if (swatchFilterMode === "earned") return swatch.done;
+    if (swatchFilterMode === "not-earned") return !swatch.done;
+    return true;
+  });
 
   return (
     <Card
@@ -1395,9 +1429,58 @@ function HouseSwatchesCard({ swatches, setSwatches, isDark }) {
             <Plus className="h-4 w-4" /> Add
           </Button>
         </div>
+
+        <Input
+          value={swatchSearch}
+          onChange={(e) => setSwatchSearch(e.target.value)}
+          placeholder="Search swatches..."
+          className={
+            isDark
+              ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7] placeholder:text-[#a79274]"
+              : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"
+          }
+        />
+
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={() =>
+              setSwatchFilterMode((mode) => (mode === "not-earned" ? "all" : "not-earned"))
+            }
+            className={
+              swatchFilterMode === "not-earned"
+                ? isDark
+                  ? "border-emerald-500 bg-emerald-900/30 text-emerald-200 hover:bg-emerald-900/40"
+                  : "border-emerald-600 bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                : isDark
+                  ? "border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#e6d0ac]"
+                  : "border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
+            }
+          >
+            Show not earned
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() =>
+              setSwatchFilterMode((mode) => (mode === "earned" ? "all" : "earned"))
+            }
+            className={
+              swatchFilterMode === "earned"
+                ? isDark
+                  ? "border-emerald-500 bg-emerald-900/30 text-emerald-200 hover:bg-emerald-900/40"
+                  : "border-emerald-600 bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                : isDark
+                  ? "border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#e6d0ac]"
+                  : "border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
+            }
+          >
+            Only show earned
+          </Button>
+        </div>
+
         <ScrollArea className="h-[320px] pr-2">
           <div className="space-y-2">
-            {swatches.map((s) => (
+            {visibleSwatches.map((s) => (
               <div
                 key={s.id}
                 className={`flex items-center justify-between rounded-xl border p-3 ${completionRowClass(
@@ -1433,6 +1516,17 @@ function HouseSwatchesCard({ swatches, setSwatches, isDark }) {
                 </Button>
               </div>
             ))}
+            {visibleSwatches.length === 0 ? (
+              <div
+                className={`rounded-xl border p-3 text-sm ${
+                  isDark
+                    ? "border-[#3f3124] bg-[#1b1510] text-[#c8bca7]"
+                    : "border-[#d8bc91] bg-[#fff7e8] text-[#6b5636]"
+                }`}
+              >
+                No swatches match the current filter/search.
+              </div>
+            ) : null}
           </div>
         </ScrollArea>
       </CardContent>
@@ -1643,7 +1737,9 @@ export default function App() {
       if (Array.isArray(saved.materials)) setMaterials(saved.materials);
       if (Array.isArray(saved.farmItems)) setFarmItems(saved.farmItems);
       if (Array.isArray(saved.generalTodos)) setGeneralTodos(saved.generalTodos);
-      if (Array.isArray(saved.landsraadHouses)) setLandsraadHouses(saved.landsraadHouses);
+      if (Array.isArray(saved.landsraadHouses)) {
+        setLandsraadHouses(normalizeLandsraadHouses(saved.landsraadHouses));
+      }
       if (Array.isArray(saved.houseSwatches)) setHouseSwatches(normalizeHouseSwatches(saved.houseSwatches));
       if (typeof saved.trackedOnlyMode === "boolean") setTrackedOnlyMode(saved.trackedOnlyMode);
     }
@@ -1676,7 +1772,9 @@ export default function App() {
           if (Array.isArray(s.materials)) setMaterials(s.materials);
           if (Array.isArray(s.farmItems)) setFarmItems(s.farmItems);
           if (Array.isArray(s.generalTodos)) setGeneralTodos(s.generalTodos);
-          if (Array.isArray(s.landsraadHouses)) setLandsraadHouses(s.landsraadHouses);
+          if (Array.isArray(s.landsraadHouses)) {
+            setLandsraadHouses(normalizeLandsraadHouses(s.landsraadHouses));
+          }
           if (Array.isArray(s.houseSwatches)) setHouseSwatches(normalizeHouseSwatches(s.houseSwatches));
           if (typeof s.trackedOnlyMode === "boolean") setTrackedOnlyMode(s.trackedOnlyMode);
         } else {
@@ -1749,6 +1847,11 @@ export default function App() {
   useEffect(() => {
     if (!hydrated) return;
     setHouseSwatches((prev) => normalizeHouseSwatches(prev));
+  }, [hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    setLandsraadHouses((prev) => normalizeLandsraadHouses(prev));
   }, [hydrated]);
 
 
@@ -1841,7 +1944,9 @@ export default function App() {
       if (Array.isArray(d.materials)) setMaterials(d.materials);
       if (Array.isArray(d.farmItems)) setFarmItems(d.farmItems);
       if (Array.isArray(d.generalTodos)) setGeneralTodos(d.generalTodos);
-      if (Array.isArray(d.landsraadHouses)) setLandsraadHouses(d.landsraadHouses);
+      if (Array.isArray(d.landsraadHouses)) {
+        setLandsraadHouses(normalizeLandsraadHouses(d.landsraadHouses));
+      }
       if (Array.isArray(d.houseSwatches)) setHouseSwatches(normalizeHouseSwatches(d.houseSwatches));
       if (typeof d.trackedOnlyMode === "boolean") setTrackedOnlyMode(d.trackedOnlyMode);
 
