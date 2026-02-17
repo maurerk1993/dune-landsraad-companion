@@ -27,6 +27,8 @@ import {
   LogOut,
   UserCircle2,
   Loader2,
+  Search,
+  X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -36,7 +38,7 @@ function uid() {
 
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "2.3.0";
+const APP_VERSION = "2.6.0";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -325,6 +327,7 @@ function normalizeHouseSwatches(swatches = []) {
 
 function makeDefaultState() {
   return {
+    themeMode: "dark",
     isDark: true,
     sessionTodos: [
       { id: uid(), text: "Run Deep Desert labs route", done: false },
@@ -350,6 +353,12 @@ function makeDefaultState() {
     houseSwatches: makeDefaultHouseSwatches(),
     trackedOnlyMode: false,
   };
+}
+
+function cycleThemeMode(current) {
+  if (current === "dark") return "light";
+  if (current === "light") return "atreides";
+  return "dark";
 }
 
 function completionRowClass(done, isDark) {
@@ -984,16 +993,35 @@ function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedO
             <Label className={`text-xs ${isDark ? "text-[#ceb89a]" : "text-[#6b5636]"}`}>
               Search House
             </Label>
-            <Input
-              value={houseSearch}
-              onChange={(e) => setHouseSearch(e.target.value)}
-              placeholder="Search by house name..."
-              className={
-                isDark
-                  ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]"
-                  : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"
-              }
-            />
+            <div className="relative">
+              <Search
+                className={`pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${
+                  isDark ? "text-[#a79274]" : "text-[#8b6c43]"
+                }`}
+              />
+              <Input
+                value={houseSearch}
+                onChange={(e) => setHouseSearch(e.target.value)}
+                placeholder="Search by house name..."
+                className={
+                  isDark
+                    ? "pl-9 pr-9 bg-[#201911] border-[#4a3a25] text-[#f2e8d7]"
+                    : "pl-9 pr-9 bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"
+                }
+              />
+              {houseSearch ? (
+                <button
+                  type="button"
+                  aria-label="Clear house search"
+                  onClick={() => setHouseSearch("")}
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 ${
+                    isDark ? "text-[#bfa98a] hover:bg-[#2a2118]" : "text-[#7d5c31] hover:bg-[#efe1c8]"
+                  }`}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              ) : null}
+            </div>
           </div>
 
           <div className={`flex gap-2 ${isMobile ? "flex-col" : "flex-wrap justify-between"}`}>
@@ -1097,39 +1125,6 @@ function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedO
                 <Plus className="h-4 w-4" /> Add
               </Button>
             </div>
-          </div>
-
-          <div
-            className={`rounded-xl border p-3 ${
-              isDark ? "border-[#4a3a25] bg-[#1a140f]" : "border-[#d4b07b] bg-[#fff4df]"
-            }`}
-          >
-            <p className={`text-xs font-semibold mb-2 ${isDark ? "text-[#d8c3a1]" : "text-[#6b5636]"}`}>
-              Route Assistant (Tracked Houses)
-            </p>
-            {trackedRoute.length === 0 ? (
-              <p className={`text-xs ${isDark ? "text-[#a79274]" : "text-[#7a6342]"}`}>
-                Track a house to build your route list.
-              </p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {trackedRoute.map((house) => (
-                  <a
-                    key={house.id}
-                    href={`${METHOD_LANDSRAAD_BASE_URL}#${houseAnchorSlug(house.name)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`inline-flex items-center rounded-md border px-2 py-1 text-xs ${
-                      isDark
-                        ? "border-[#5a462c] bg-[#211910] text-[#e6d0ac] hover:bg-[#2a2118]"
-                        : "border-[#c9a878] bg-[#f7ead2] text-[#6d4f27] hover:bg-[#efdfc2]"
-                    }`}
-                  >
-                    {house.name}
-                  </a>
-                ))}
-              </div>
-            )}
           </div>
 
           {isMobile ? (
@@ -1666,16 +1661,35 @@ function HouseSwatchesCard({ swatches, setSwatches, isDark }) {
           </Button>
         </div>
 
-        <Input
-          value={swatchSearch}
-          onChange={(e) => setSwatchSearch(e.target.value)}
-          placeholder="Search swatches..."
-          className={
-            isDark
-              ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7] placeholder:text-[#a79274]"
-              : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"
-          }
-        />
+        <div className="relative">
+          <Search
+            className={`pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${
+              isDark ? "text-[#a79274]" : "text-[#8b6c43]"
+            }`}
+          />
+          <Input
+            value={swatchSearch}
+            onChange={(e) => setSwatchSearch(e.target.value)}
+            placeholder="Search swatches..."
+            className={
+              isDark
+                ? "pl-9 pr-9 bg-[#201911] border-[#4a3a25] text-[#f2e8d7] placeholder:text-[#a79274]"
+                : "pl-9 pr-9 bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"
+            }
+          />
+          {swatchSearch ? (
+            <button
+              type="button"
+              aria-label="Clear swatch search"
+              onClick={() => setSwatchSearch("")}
+              className={`absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 ${
+                isDark ? "text-[#bfa98a] hover:bg-[#2a2118]" : "text-[#7d5c31] hover:bg-[#efe1c8]"
+              }`}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          ) : null}
+        </div>
 
         <div className="flex flex-wrap gap-2">
           <Button
@@ -1787,7 +1801,7 @@ function HouseSwatchesCard({ swatches, setSwatches, isDark }) {
   );
 }
 
-function AuthGate({ onSignedIn, isDark }) {
+function AuthGate({ onSignedIn, isDark, isAtreides }) {
   const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -1825,7 +1839,9 @@ function AuthGate({ onSignedIn, isDark }) {
       className={`min-h-screen w-full flex items-center justify-center p-4 ${
         isDark
           ? "bg-[radial-gradient(1100px_520px_at_12%_8%,_#3e2748_0%,_transparent_58%),radial-gradient(900px_440px_at_88%_18%,_#4a1e28_0%,_transparent_62%),radial-gradient(700px_360px_at_50%_115%,_#2a2f5e_0%,_transparent_68%),linear-gradient(170deg,_#1b1319_0%,_#110d12_48%,_#0b090d_100%)] text-[#f2e7d5]"
-          : "bg-[radial-gradient(900px_440px_at_20%_6%,_#cfb5ef_0%,_transparent_62%),radial-gradient(1200px_500px_at_15%_8%,_#fff0cd_0%,_#f6e3c0_35%,_transparent_70%),radial-gradient(900px_420px_at_85%_22%,_#efd5a6_0%,_#e4c38d_40%,_transparent_72%),linear-gradient(165deg,_#f8e8c9_0%,_#edd7b2_44%,_#dcc08f_100%)] text-[#3a2b17]"
+          : isAtreides
+            ? "bg-[radial-gradient(900px_420px_at_18%_10%,_#d9efe1_0%,_transparent_60%),radial-gradient(780px_420px_at_82%_20%,_#bfd9c3_0%,_transparent_65%),linear-gradient(165deg,_#e7efe8_0%,_#d6e4d8_45%,_#bfceb9_100%)] text-[#243229]"
+            : "bg-[radial-gradient(900px_440px_at_20%_6%,_#cfb5ef_0%,_transparent_62%),radial-gradient(1200px_500px_at_15%_8%,_#fff0cd_0%,_#f6e3c0_35%,_transparent_70%),radial-gradient(900px_420px_at_85%_22%,_#efd5a6_0%,_#e4c38d_40%,_transparent_72%),linear-gradient(165deg,_#f8e8c9_0%,_#edd7b2_44%,_#dcc08f_100%)] text-[#3a2b17]"
       }`}
     >
       <Card
@@ -1945,7 +1961,7 @@ export default function App() {
   const [cloudReady, setCloudReady] = useState(false);
   const [cloudSaving, setCloudSaving] = useState(false);
 
-  const [isDark, setIsDark] = useState(defaults.isDark);
+  const [themeMode, setThemeMode] = useState(defaults.themeMode);
   const [sessionTodos, setSessionTodos] = useState(defaults.sessionTodos);
   const [materials, setMaterials] = useState(defaults.materials);
   const [farmItems, setFarmItems] = useState(defaults.farmItems);
@@ -1958,6 +1974,8 @@ export default function App() {
   const [weeklyResetCountdown, setWeeklyResetCountdown] = useState(() =>
     getTimeUntilNextTuesdayMidnightEt()
   );
+  const isDark = themeMode === "dark";
+  const isAtreides = themeMode === "atreides";
 
   // Auth bootstrap
   useEffect(() => {
@@ -1986,7 +2004,11 @@ export default function App() {
     const saved = raw ? safeParse(raw, null) : null;
 
     if (saved && typeof saved === "object") {
-      if (typeof saved.isDark === "boolean") setIsDark(saved.isDark);
+      if (typeof saved.themeMode === "string") {
+        setThemeMode(saved.themeMode);
+      } else if (typeof saved.isDark === "boolean") {
+        setThemeMode(saved.isDark ? "dark" : "light");
+      }
       if (Array.isArray(saved.sessionTodos)) setSessionTodos(saved.sessionTodos);
       if (Array.isArray(saved.materials)) setMaterials(saved.materials);
       if (Array.isArray(saved.farmItems)) setFarmItems(saved.farmItems);
@@ -2021,7 +2043,11 @@ export default function App() {
 
         if (data?.state && typeof data.state === "object") {
           const s = data.state;
-          if (typeof s.isDark === "boolean") setIsDark(s.isDark);
+          if (typeof s.themeMode === "string") {
+            setThemeMode(s.themeMode);
+          } else if (typeof s.isDark === "boolean") {
+            setThemeMode(s.isDark ? "dark" : "light");
+          }
           if (Array.isArray(s.sessionTodos)) setSessionTodos(s.sessionTodos);
           if (Array.isArray(s.materials)) setMaterials(s.materials);
           if (Array.isArray(s.farmItems)) setFarmItems(s.farmItems);
@@ -2037,6 +2063,7 @@ export default function App() {
             user_id: session.user.id,
             state: {
               isDark,
+              themeMode,
               sessionTodos,
               materials,
               farmItems,
@@ -2070,6 +2097,7 @@ export default function App() {
       STORAGE_KEY,
       JSON.stringify({
         isDark,
+        themeMode,
         sessionTodos,
         materials,
         farmItems,
@@ -2082,6 +2110,7 @@ export default function App() {
   }, [
     hydrated,
     isDark,
+    themeMode,
     sessionTodos,
     materials,
     farmItems,
@@ -2120,6 +2149,7 @@ export default function App() {
           user_id: session.user.id,
           state: {
             isDark,
+            themeMode,
             sessionTodos,
             materials,
             farmItems,
@@ -2146,6 +2176,7 @@ export default function App() {
     hydrated,
     cloudReady,
     isDark,
+    themeMode,
     sessionTodos,
     materials,
     farmItems,
@@ -2163,6 +2194,7 @@ export default function App() {
       app: "Dune Awakening: Landsraad Companion",
       data: {
         isDark,
+        themeMode,
         sessionTodos,
         materials,
         farmItems,
@@ -2193,7 +2225,11 @@ export default function App() {
       const d = parsed?.data && typeof parsed.data === "object" ? parsed.data : parsed;
       if (!d || typeof d !== "object") return window.alert("Invalid backup file format.");
 
-      if (typeof d.isDark === "boolean") setIsDark(d.isDark);
+      if (typeof d.themeMode === "string") {
+        setThemeMode(d.themeMode);
+      } else if (typeof d.isDark === "boolean") {
+        setThemeMode(d.isDark ? "dark" : "light");
+      }
       if (Array.isArray(d.sessionTodos)) setSessionTodos(d.sessionTodos);
       if (Array.isArray(d.materials)) setMaterials(d.materials);
       if (Array.isArray(d.farmItems)) setFarmItems(d.farmItems);
@@ -2225,7 +2261,7 @@ export default function App() {
   }
 
   if (!session) {
-    return <AuthGate onSignedIn={setSession} isDark={isDark} />;
+    return <AuthGate onSignedIn={setSession} isDark={isDark} isAtreides={isAtreides} />;
   }
 
   return (
@@ -2233,7 +2269,9 @@ export default function App() {
       className={`min-h-screen w-full transition-colors ${
         isDark
           ? "bg-[radial-gradient(1100px_520px_at_12%_8%,_#3e2748_0%,_transparent_58%),radial-gradient(900px_440px_at_88%_18%,_#4a1e28_0%,_transparent_62%),radial-gradient(700px_360px_at_50%_115%,_#2a2f5e_0%,_transparent_68%),linear-gradient(170deg,_#1b1319_0%,_#110d12_48%,_#0b090d_100%)] text-[#f2e7d5]"
-          : "bg-[radial-gradient(900px_440px_at_20%_6%,_#cfb5ef_0%,_transparent_62%),radial-gradient(1200px_500px_at_15%_8%,_#fff0cd_0%,_#f6e3c0_35%,_transparent_70%),radial-gradient(900px_420px_at_85%_22%,_#efd5a6_0%,_#e4c38d_40%,_transparent_72%),linear-gradient(165deg,_#f8e8c9_0%,_#edd7b2_44%,_#dcc08f_100%)] text-[#3a2b17]"
+          : isAtreides
+            ? "bg-[radial-gradient(950px_420px_at_18%_8%,_#d9efe1_0%,_transparent_63%),radial-gradient(900px_420px_at_85%_20%,_#bfdac8_0%,_transparent_66%),linear-gradient(165deg,_#e6efe8_0%,_#d4e1d4_46%,_#bdcbbd_100%)] text-[#233227]"
+            : "bg-[radial-gradient(900px_440px_at_20%_6%,_#cfb5ef_0%,_transparent_62%),radial-gradient(1200px_500px_at_15%_8%,_#fff0cd_0%,_#f6e3c0_35%,_transparent_70%),radial-gradient(900px_420px_at_85%_22%,_#efd5a6_0%,_#e4c38d_40%,_transparent_72%),linear-gradient(165deg,_#f8e8c9_0%,_#edd7b2_44%,_#dcc08f_100%)] text-[#3a2b17]"
       }`}
     >
       <div className="mx-auto max-w-7xl p-4 md:p-8 space-y-6">
@@ -2241,7 +2279,11 @@ export default function App() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           className={`rounded-3xl border p-6 md:p-8 shadow-xl backdrop-blur-md ${
-            isDark ? "bg-[#18130e]/85 border-[#5a452a] shadow-[#00000066]" : "bg-[#fff4df]/90 border-[#c9a878] shadow-[#9b7a4555]"
+            isDark
+              ? "bg-[#18130e]/85 border-[#5a452a] shadow-[#00000066]"
+              : isAtreides
+                ? "bg-[#ecf4ea]/90 border-[#8ea893] shadow-[#50705655]"
+                : "bg-[#fff4df]/90 border-[#c9a878] shadow-[#9b7a4555]"
           }`}
         >
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -2298,15 +2340,17 @@ export default function App() {
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => setIsDark((v) => !v)}
+                  onClick={() => setThemeMode((prev) => cycleThemeMode(prev))}
                   className={
                     isDark
                       ? "border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#e6d0ac]"
-                      : "border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
+                      : isAtreides
+                        ? "border-[#7b9681] bg-[#dce9dc] hover:bg-[#cddfcd] text-[#2e4935]"
+                        : "border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
                   }
                 >
                   {isDark ? <Sun className="h-4 w-4 mr-2" /> : <Moon className="h-4 w-4 mr-2" />}
-                  {isDark ? "Light Mode" : "Dark Mode"}
+                  {isDark ? "Theme: Dark" : isAtreides ? "Theme: Atreides" : "Theme: Light"}
                 </Button>
 
                 <Button
@@ -2356,14 +2400,18 @@ export default function App() {
           </div>
         </motion.div>
 
-        <Tabs defaultValue="coop" className="space-y-4">
+        <Tabs defaultValue="landsraad" className="space-y-4">
           <TabsList
             className={`${
               isMobile
                 ? "flex overflow-x-auto whitespace-nowrap"
                 : "grid grid-cols-2 md:grid-cols-6"
             } gap-2 h-auto rounded-2xl p-1.5 border shadow-lg backdrop-blur-sm ${
-              isDark ? "bg-[#18130e]/85 border-[#5a452a] shadow-[#00000066]" : "bg-[#fff3dc]/95 border-[#c9a878] shadow-[#9b7a4555]"
+              isDark
+                ? "bg-[#18130e]/85 border-[#5a452a] shadow-[#00000066]"
+                : isAtreides
+                  ? "bg-[#e8f1e8]/95 border-[#8ea893] shadow-[#50705655]"
+                  : "bg-[#fff3dc]/95 border-[#c9a878] shadow-[#9b7a4555]"
             }`}
           >
             <TabsTrigger value="coop" className={`rounded-xl gap-2 ${isMobile ? "shrink-0" : ""}`}>
