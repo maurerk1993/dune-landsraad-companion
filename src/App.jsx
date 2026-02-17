@@ -37,8 +37,9 @@ function uid() {
 }
 
 const STORAGE_KEY = "dune_landsraad_companion_v1";
+const SHARED_TODOS_CACHE_KEY = "dune_landsraad_shared_todos_cache_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "2.8.0";
+const APP_VERSION = "3.0.0";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -55,6 +56,18 @@ const WEEKDAY_INDEX = {
 
 const APP_CHANGE_NOTES = [
   {
+    version: "3.0.0",
+    notes: ["Change Notes now shows the latest 10 revisions in a scrollable list."],
+  },
+  {
+    version: "2.9.0",
+    notes: [
+      "Removed sample Shared To-Do items for new sessions.",
+      "Added shared to-do local cache fallback so refresh won't reset list.",
+      "Preserved previously entered shared to-dos from legacy local data.",
+    ],
+  },
+  {
     version: "2.8.0",
     notes: [
       "Added Change Notes panel with version history.",
@@ -69,6 +82,42 @@ const APP_CHANGE_NOTES = [
   {
     version: "2.6.0",
     notes: ["Added clearable search inputs and Atreides theme option."],
+  },
+  {
+    version: "2.5.0",
+    notes: ["Removed the Route Assistant UI box from Landsraad tab."],
+  },
+  {
+    version: "2.4.0",
+    notes: ["Set Landsraad as the default landing tab."],
+  },
+  {
+    version: "2.3.0",
+    notes: ["Fixed mobile Landsraad scroll-lock by avoiding nested mobile scroll area."],
+  },
+  {
+    version: "2.2.0",
+    notes: ["Kept Select House dropdown alphabetical and protected core swatches from deletion."],
+  },
+  {
+    version: "2.1.0",
+    notes: ["Added mobile detection and mobile-specific layout improvements."],
+  },
+  {
+    version: "2.0.0",
+    notes: ["Restored deleted houses automatically and fixed Current input editing behavior."],
+  },
+  {
+    version: "1.9.0",
+    notes: ["Backfilled prepopulated house swatches for existing users."],
+  },
+  {
+    version: "1.8.0",
+    notes: ["Prepopulated all house placeable swatches and enhanced light-mode spice tint."],
+  },
+  {
+    version: "1.7.0",
+    notes: ["Added subtle spice-inspired purple/red ambient accents to dark mode."],
   },
 ];
 
@@ -348,10 +397,7 @@ function makeDefaultState() {
   return {
     themeMode: "dark",
     isDark: true,
-    sessionTodos: [
-      { id: uid(), text: "Run Deep Desert labs route", done: false },
-      { id: uid(), text: "Check contracts before reset", done: false },
-    ],
+    sessionTodos: [],
     materials: [
       { id: uid(), name: "Plasteel", amount: 300, done: false },
       { id: uid(), name: "Silicone Blocks", amount: 120, done: false },
@@ -2024,6 +2070,11 @@ export default function App() {
     const raw =
       typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
     const saved = raw ? safeParse(raw, null) : null;
+    const sharedTodosCacheRaw =
+      typeof window !== "undefined"
+        ? window.localStorage.getItem(SHARED_TODOS_CACHE_KEY)
+        : null;
+    const sharedTodosCache = sharedTodosCacheRaw ? safeParse(sharedTodosCacheRaw, null) : null;
 
     if (saved && typeof saved === "object") {
       if (typeof saved.themeMode === "string") {
@@ -2040,6 +2091,10 @@ export default function App() {
       }
       if (Array.isArray(saved.houseSwatches)) setHouseSwatches(normalizeHouseSwatches(saved.houseSwatches));
       if (typeof saved.trackedOnlyMode === "boolean") setTrackedOnlyMode(saved.trackedOnlyMode);
+    }
+
+    if (Array.isArray(sharedTodosCache)) {
+      setSessionTodos(sharedTodosCache);
     }
 
     setHydrated(true);
@@ -2181,6 +2236,13 @@ export default function App() {
     houseSwatches,
     trackedOnlyMode,
   ]);
+
+  // local cache for shared to-do fallback/migration
+  useEffect(() => {
+    if (!hydrated || typeof window === "undefined") return;
+
+    window.localStorage.setItem(SHARED_TODOS_CACHE_KEY, JSON.stringify(sessionTodos));
+  }, [hydrated, sessionTodos]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -2621,7 +2683,7 @@ export default function App() {
             </div>
 
             <div className="mt-4 space-y-3">
-              {APP_CHANGE_NOTES.map((entry) => (
+              {APP_CHANGE_NOTES.slice(0, 10).map((entry) => (
                 <div
                   key={entry.version}
                   className={`rounded-lg border p-3 ${
