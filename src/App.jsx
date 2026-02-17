@@ -28,7 +28,6 @@ import {
   UserCircle2,
   Loader2,
   Search,
-  Wrench,
   X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -2611,9 +2610,6 @@ export default function App() {
             </TabsTrigger>
             <TabsTrigger value="general" className={`rounded-xl gap-2 ${isMobile ? "shrink-0" : ""}`}>
               <ListTodo className="h-4 w-4" /> General To-Do
-            </TabsTrigger>
-            <TabsTrigger value="dune-tools" className={`rounded-xl gap-2 ${isMobile ? "shrink-0" : ""}`}>
-              <Wrench className="h-4 w-4" /> Dune Tools
             </TabsTrigger>
           </TabsList>
 
