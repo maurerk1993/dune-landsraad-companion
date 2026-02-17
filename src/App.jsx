@@ -36,7 +36,7 @@ function uid() {
 
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "1.8.0";
+const APP_VERSION = "1.9.0";
 const METHOD_LANDSRAAD_BASE_URL =
   "https://www.method.gg/dune-awakening/all-landsraad-house-representative-locations-in-dune-awakening";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -242,6 +242,27 @@ function makeDefaultHouseSwatches() {
     text: `${houseName} Placeable Swatch`,
     done: false,
   }));
+}
+
+function normalizeHouseSwatches(swatches = []) {
+  const seeded = makeDefaultHouseSwatches();
+  const existingByText = new Map(
+    swatches.map((swatch) => [String(swatch.text || "").trim().toLowerCase(), swatch])
+  );
+
+  const mergedSeeded = seeded.map((seed) => {
+    const existing = existingByText.get(seed.text.toLowerCase());
+    return existing
+      ? { ...seed, id: existing.id || seed.id, done: Boolean(existing.done) }
+      : seed;
+  });
+
+  const extras = swatches.filter((swatch) => {
+    const key = String(swatch.text || "").trim().toLowerCase();
+    return key && !mergedSeeded.some((seed) => seed.text.toLowerCase() === key);
+  });
+
+  return [...mergedSeeded, ...extras];
 }
 
 function makeDefaultState() {
@@ -1623,7 +1644,7 @@ export default function App() {
       if (Array.isArray(saved.farmItems)) setFarmItems(saved.farmItems);
       if (Array.isArray(saved.generalTodos)) setGeneralTodos(saved.generalTodos);
       if (Array.isArray(saved.landsraadHouses)) setLandsraadHouses(saved.landsraadHouses);
-      if (Array.isArray(saved.houseSwatches)) setHouseSwatches(saved.houseSwatches);
+      if (Array.isArray(saved.houseSwatches)) setHouseSwatches(normalizeHouseSwatches(saved.houseSwatches));
       if (typeof saved.trackedOnlyMode === "boolean") setTrackedOnlyMode(saved.trackedOnlyMode);
     }
 
@@ -1656,7 +1677,7 @@ export default function App() {
           if (Array.isArray(s.farmItems)) setFarmItems(s.farmItems);
           if (Array.isArray(s.generalTodos)) setGeneralTodos(s.generalTodos);
           if (Array.isArray(s.landsraadHouses)) setLandsraadHouses(s.landsraadHouses);
-          if (Array.isArray(s.houseSwatches)) setHouseSwatches(s.houseSwatches);
+          if (Array.isArray(s.houseSwatches)) setHouseSwatches(normalizeHouseSwatches(s.houseSwatches));
           if (typeof s.trackedOnlyMode === "boolean") setTrackedOnlyMode(s.trackedOnlyMode);
         } else {
           // Seed first cloud row with current local state
@@ -1725,6 +1746,11 @@ export default function App() {
 
     return () => clearInterval(interval);
   }, []);
+  useEffect(() => {
+    if (!hydrated) return;
+    setHouseSwatches((prev) => normalizeHouseSwatches(prev));
+  }, [hydrated]);
+
 
   // cloud autosave (debounced)
   useEffect(() => {
@@ -1816,7 +1842,7 @@ export default function App() {
       if (Array.isArray(d.farmItems)) setFarmItems(d.farmItems);
       if (Array.isArray(d.generalTodos)) setGeneralTodos(d.generalTodos);
       if (Array.isArray(d.landsraadHouses)) setLandsraadHouses(d.landsraadHouses);
-      if (Array.isArray(d.houseSwatches)) setHouseSwatches(d.houseSwatches);
+      if (Array.isArray(d.houseSwatches)) setHouseSwatches(normalizeHouseSwatches(d.houseSwatches));
       if (typeof d.trackedOnlyMode === "boolean") setTrackedOnlyMode(d.trackedOnlyMode);
 
       window.alert("Backup imported successfully.");
