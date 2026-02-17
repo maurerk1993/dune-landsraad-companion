@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1029,6 +1029,8 @@ function LandsraadCard({ houses, setHouses, isDark, trackedOnlyMode, setTrackedO
       )
     );
   };
+
+  const trackedRoute = sortedHouses.filter((house) => house.pinned);
 
   return (
     <div className="space-y-4">
@@ -2479,41 +2481,6 @@ export default function App() {
                 Command center for Great House goals, weekly strategy, and Landsraad cycle planning.
               </p>
 
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={exportBackup}
-                  className={`inline-flex items-center rounded-md h-9 px-3 text-sm border ${
-                    isDark
-                      ? "border-[#5a462c] text-[#e6d0ac] hover:bg-[#2a2118]"
-                      : "border-[#c9a878] text-[#6d4f27] hover:bg-[#efdfc2]"
-                  }`}
-                >
-                  Export Backup
-                </button>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`inline-flex items-center rounded-md h-9 px-3 text-sm border ${
-                    isDark
-                      ? "border-[#5a462c] text-[#e6d0ac] hover:bg-[#2a2118]"
-                      : "border-[#c9a878] text-[#6d4f27] hover:bg-[#efdfc2]"
-                  }`}
-                >
-                  Import Backup
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="application/json,.json"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    importBackupFromFile(f);
-                    e.target.value = "";
-                  }}
-                />
-              </div>
             </div>
 
             <div className="flex flex-col items-start md:items-end gap-2">
@@ -2628,6 +2595,9 @@ export default function App() {
             <TabsTrigger value="general" className={`rounded-xl gap-2 ${isMobile ? "shrink-0" : ""}`}>
               <ListTodo className="h-4 w-4" /> General To-Do
             </TabsTrigger>
+            <TabsTrigger value="dune-tools" className={`rounded-xl gap-2 ${isMobile ? "shrink-0" : ""}`}>
+              <Wrench className="h-4 w-4" /> Dune Tools
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="coop">
@@ -2681,7 +2651,33 @@ export default function App() {
               isDark={isDark}
             />
           </TabsContent>
+
         </Tabs>
+        )}
+      </div>
+
+      <div className="fixed bottom-3 right-4 flex flex-col items-end gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setShowChangeNotes(true)}
+          className={
+            isDark
+              ? "h-7 px-2 text-[11px] border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#d7c19d]"
+              : "h-7 px-2 text-[11px] border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
+          }
+        >
+          Change Notes
+        </Button>
+
+        <div
+          className={`text-xs font-medium tracking-wide ${
+            isDark ? "text-[#8f7652]" : "text-[#7e6440]"
+          }`}
+        >
+          v{APP_VERSION}
+        </div>
       </div>
 
       <div className="fixed bottom-3 right-4 flex flex-col items-end gap-2">
