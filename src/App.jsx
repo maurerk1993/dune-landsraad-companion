@@ -34,6 +34,7 @@ import {
   EyeOff,
   Wrench,
   ExternalLink,
+  AlertTriangle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -44,7 +45,9 @@ function uid() {
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const SHARED_TODOS_CACHE_KEY = "dune_landsraad_shared_todos_cache_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "3.4.4";
+const APP_VERSION = "3.5.0";
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+const RESET_WARNING_DISMISS_KEY = "dune_landsraad_reset_warning_dismissals_v1";
 const NEW_YORK_TIME_ZONE = "America/New_York";
 const ADMIN_EMAIL = "maurerk1993@gmail.com";
 const LOCATION_CONTENT_KEY = "global";
@@ -62,6 +65,14 @@ const WEEKDAY_INDEX = {
 };
 
 const APP_CHANGE_NOTES = [
+  {
+    version: "3.5.0",
+    notes: [
+      "Weekly reset timer now pulses red when there are less than 24 hours left before reset.",
+      "Added a new Deep Desert reset alert popup that appears on login within the final 24-hour window.",
+      "Added a 'Do not display for the rest of the week' option for the reset alert and an admin test toggle to simulate the final 24-hour warning state.",
+    ],
+  },
   {
     version: "3.4.4",
     notes: [
@@ -267,7 +278,7 @@ function zonedDateTimeToUtcDate({ year, month, day, hour = 0, minute = 0, second
   return new Date(timestamp);
 }
 
-function getTimeUntilNextTuesdayMidnightEt(now = new Date()) {
+function getNextTuesdayMidnightEt(now = new Date()) {
   const nyDateParts = new Intl.DateTimeFormat("en-US", {
     timeZone: NEW_YORK_TIME_ZONE,
     year: "numeric",
@@ -296,7 +307,7 @@ function getTimeUntilNextTuesdayMidnightEt(now = new Date()) {
     daysUntilTuesday = 7;
   }
 
-  const targetEtMidnight = zonedDateTimeToUtcDate(
+  return zonedDateTimeToUtcDate(
     {
       year,
       month,
@@ -307,8 +318,43 @@ function getTimeUntilNextTuesdayMidnightEt(now = new Date()) {
     },
     NEW_YORK_TIME_ZONE
   );
+}
+
+function getTimeUntilNextTuesdayMidnightEt(now = new Date()) {
+  const targetEtMidnight = getNextTuesdayMidnightEt(now);
 
   return Math.max(0, targetEtMidnight.getTime() - now.getTime());
+}
+
+function readResetWarningDismissals() {
+  if (typeof window === "undefined") return {};
+  const raw = window.localStorage.getItem(RESET_WARNING_DISMISS_KEY);
+  const parsed = raw ? safeParse(raw, {}) : {};
+  return parsed && typeof parsed === "object" ? parsed : {};
+}
+
+function writeResetWarningDismissals(value) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(RESET_WARNING_DISMISS_KEY, JSON.stringify(value));
+}
+
+function isResetWarningDismissedForWeek(userId, weekKey) {
+  if (!userId || !weekKey) return false;
+  const dismissals = readResetWarningDismissals();
+  return dismissals[userId] === weekKey;
+}
+
+function setResetWarningDismissedForWeek(userId, weekKey, dismissed) {
+  if (!userId) return;
+  const dismissals = readResetWarningDismissals();
+
+  if (dismissed) {
+    dismissals[userId] = weekKey;
+  } else {
+    delete dismissals[userId];
+  }
+
+  writeResetWarningDismissals(dismissals);
 }
 
 function formatCountdown(ms) {
@@ -2661,10 +2707,17 @@ export default function App() {
   const [weeklyResetCountdown, setWeeklyResetCountdown] = useState(() =>
     getTimeUntilNextTuesdayMidnightEt()
   );
+  const [nextWeeklyResetAtIso, setNextWeeklyResetAtIso] = useState(() =>
+    getNextTuesdayMidnightEt().toISOString()
+  );
+  const [forceResetWarningMode, setForceResetWarningMode] = useState(false);
+  const [showResetWarningPopup, setShowResetWarningPopup] = useState(false);
+  const [dismissResetWarningForWeek, setDismissResetWarningForWeek] = useState(false);
   const isDark = themeMode === "dark";
   const isAtreides = themeMode === "atreides";
   const isSpice = themeMode === "spice";
   const isAdmin = (session?.user?.email || "").toLowerCase() === ADMIN_EMAIL;
+  const isResetWarningWindow = forceResetWarningMode || weeklyResetCountdown <= DAY_IN_MS;
 
   // Auth bootstrap
   useEffect(() => {
@@ -2928,12 +2981,42 @@ export default function App() {
   }, [hydrated, sessionTodos]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setWeeklyResetCountdown(getTimeUntilNextTuesdayMidnightEt());
-    }, 1000);
+    const syncResetCountdown = () => {
+      const now = new Date();
+      setWeeklyResetCountdown(getTimeUntilNextTuesdayMidnightEt(now));
+      setNextWeeklyResetAtIso(getNextTuesdayMidnightEt(now).toISOString());
+    };
+
+    syncResetCountdown();
+    const interval = setInterval(syncResetCountdown, 1000);
 
     return () => clearInterval(interval);
   }, []);
+  useEffect(() => {
+    const userId = session?.user?.id;
+
+    if (!hydrated || !userId || !nextWeeklyResetAtIso) {
+      setShowResetWarningPopup(false);
+      setDismissResetWarningForWeek(false);
+      return;
+    }
+
+    const isDismissedForCurrentWeek = isResetWarningDismissedForWeek(userId, nextWeeklyResetAtIso);
+    setDismissResetWarningForWeek(isDismissedForCurrentWeek);
+
+    if (!isResetWarningWindow || isDismissedForCurrentWeek) {
+      setShowResetWarningPopup(false);
+      return;
+    }
+
+    setShowResetWarningPopup(true);
+  }, [
+    hydrated,
+    session?.user?.id,
+    nextWeeklyResetAtIso,
+    isResetWarningWindow,
+  ]);
+
   useEffect(() => {
     if (!hydrated) return;
     setHouseSwatches((prev) => normalizeHouseSwatches(prev));
@@ -3129,6 +3212,18 @@ export default function App() {
     }));
   };
 
+  const handleResetWarningWeekDismissalChange = (checked) => {
+    const userId = session?.user?.id;
+    const nextValue = Boolean(checked);
+
+    setDismissResetWarningForWeek(nextValue);
+    setResetWarningDismissedForWeek(userId, nextWeeklyResetAtIso, nextValue);
+
+    if (nextValue) {
+      setShowResetWarningPopup(false);
+    }
+  };
+
   const addFarmSource = () => {
     const nextSource = farmSourceInput.trim();
     if (!nextSource) return;
@@ -3319,19 +3414,24 @@ export default function App() {
 
               <div
                 className={`w-full sm:w-auto rounded-xl border px-3 py-2 text-xs sm:min-w-[220px] ${
-                  isDark
-                    ? "border-[#4a3a25] bg-[#1b1510] text-[#e6d0ac]"
-                    : isAtreides
-                      ? "border-[#6b8d76] bg-[#294336] text-[#d9ece0]"
-                      : isSpice
-                        ? "border-[#8f69b1] bg-[#d7b5ea] text-[#3f2459]"
-                        : "border-[#c9a878] bg-[#f7ead2] text-[#6d4f27]"
+                  isResetWarningWindow
+                    ? "border-rose-500 bg-rose-900/30 text-rose-100 animate-pulse"
+                    : isDark
+                      ? "border-[#4a3a25] bg-[#1b1510] text-[#e6d0ac]"
+                      : isAtreides
+                        ? "border-[#6b8d76] bg-[#294336] text-[#d9ece0]"
+                        : isSpice
+                          ? "border-[#8f69b1] bg-[#d7b5ea] text-[#3f2459]"
+                          : "border-[#c9a878] bg-[#f7ead2] text-[#6d4f27]"
                 }`}
               >
                 <div className="flex items-center gap-2 font-semibold">
                   <Clock3 className="h-3.5 w-3.5" /> Weekly Reset (Tue 12:00 AM EST)
+                  {isResetWarningWindow ? (
+                    <Badge className="border border-rose-400/80 bg-rose-500/20 text-rose-100">Alert</Badge>
+                  ) : null}
                 </div>
-                <div className={`${isDark ? "text-[#c8bca7]" : isAtreides ? "text-[#b9cfc0]" : isSpice ? "text-[#5f3e7a]" : "text-[#7a6342]"}`}>
+                <div className={`${isResetWarningWindow ? "text-rose-100" : isDark ? "text-[#c8bca7]" : isAtreides ? "text-[#b9cfc0]" : isSpice ? "text-[#5f3e7a]" : "text-[#7a6342]"}`}>
                   {formatCountdown(weeklyResetCountdown)}
                 </div>
               </div>
@@ -3527,6 +3627,60 @@ export default function App() {
         </div>
       ) : null}
 
+      {showResetWarningPopup && session?.user?.id ? (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4">
+          <div
+            className={`relative w-full max-w-lg rounded-2xl border p-4 sm:p-5 ${
+              isDark
+                ? "bg-[#1a140f] border-rose-700/70 text-[#f2e7d5]"
+                : "bg-[#fff8ec] border-rose-400 text-[#3a2b17]"
+            }`}
+          >
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              onClick={() => setShowResetWarningPopup(false)}
+              className={`absolute right-3 top-3 h-7 w-7 ${
+                isDark
+                  ? "border-rose-700/80 bg-rose-950/40 hover:bg-rose-900/60 text-rose-200"
+                  : "border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-700"
+              }`}
+              aria-label="Close reset warning"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+
+            <div className="flex items-center gap-2 pr-10">
+              <AlertTriangle className="h-5 w-5 text-rose-500" />
+              <h3 className="text-sm sm:text-base font-semibold">Deep Desert Reset Alert</h3>
+              <AlertTriangle className="h-5 w-5 text-rose-500" />
+            </div>
+
+            <p className={`mt-3 text-sm leading-relaxed ${isDark ? "text-[#e9d2ce]" : "text-[#6b2b2b]"}`}>
+              There is less than 24 hours until the Deep Desert resets. Have you taken down your base and secured all important items?
+            </p>
+
+            <div
+              className={`mt-4 rounded-lg border p-3 ${
+                isDark ? "border-rose-800/70 bg-rose-950/20" : "border-rose-200 bg-rose-50"
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  checked={dismissResetWarningForWeek}
+                  onCheckedChange={handleResetWarningWeekDismissalChange}
+                  className={checkboxClass(isDark, dismissResetWarningForWeek)}
+                />
+                <p className={`text-xs sm:text-sm ${isDark ? "text-[#f0d8d1]" : "text-[#6b2b2b]"}`}>
+                  Do not display for the rest of the week
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {showLocationPopup ? (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4" onClick={() => setShowLocationPopup(false)}>
           <div
@@ -3620,6 +3774,26 @@ export default function App() {
             <p className={`mt-2 text-xs ${isDark ? "text-[#c8bca7]" : "text-[#7a6342]"}`}>
               Upload map screenshots, select map locations, and edit optional popup notes shown in the View Location popup.
             </p>
+
+            <div
+              className={`mt-3 rounded-lg border p-3 ${
+                isDark ? "border-[#4a3a25] bg-[#211910]" : "border-[#d8bc91] bg-[#fff3df]"
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  checked={forceResetWarningMode}
+                  onCheckedChange={(checked) => setForceResetWarningMode(Boolean(checked))}
+                  className={checkboxClass(isDark, forceResetWarningMode)}
+                />
+                <div>
+                  <p className="text-sm font-semibold">Test less-than-24-hours reset warning mode</p>
+                  <p className={`text-xs mt-1 ${isDark ? "text-[#c8bca7]" : "text-[#7a6342]"}`}>
+                    Simulates the final 24-hour countdown state so the red timer and login alert popup can be tested.
+                  </p>
+                </div>
+              </div>
+            </div>
             {locationEntriesError ? (
               <p className={`mt-2 text-xs ${isDark ? "text-amber-300" : "text-amber-700"}`}>
                 Sync warning: {locationEntriesError}
