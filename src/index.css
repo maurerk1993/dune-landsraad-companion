@@ -105,23 +105,23 @@
   }
 
   .theme-spice .bg-\[\#fff9ef\] {
-    @apply bg-[#ead8f5];
+    @apply bg-[#e4cef2];
   }
 
   .theme-spice .bg-\[\#fffaf0\] {
-    @apply bg-[#ead7f6];
+    @apply bg-[#e3ccf2];
   }
 
   .theme-spice .bg-\[\#fffdf7\] {
-    @apply bg-[#f2e5fa];
+    @apply bg-[#ebd9f7];
   }
 
   .theme-spice .bg-\[\#f7ead2\] {
-    @apply bg-[#e0c8ef];
+    @apply bg-[#d8b9eb];
   }
 
   .theme-spice .bg-\[\#efe1c8\] {
-    @apply bg-[#d9bce8];
+    @apply bg-[#cfafe3];
   }
 
   .theme-spice .border-\[\#d8bc91\] {
@@ -148,7 +148,7 @@
   .theme-spice .text-\[\#5a4528\],
   .theme-spice .text-\[\#7b6342\],
   .theme-spice .text-\[\#8a632f\] {
-    @apply text-[#5a3678];
+    @apply text-[#47235f];
   }
 
   .theme-spice .bg-\[\#a56b2c\] {
@@ -162,6 +162,35 @@
   .theme-spice .text-\[\#fff4de\] {
     @apply text-[#f3e9ff];
   }
+
+  .theme-spice .text-\[\#55356f\],
+  .theme-spice .text-\[\#5d3a79\],
+  .theme-spice .text-\[\#654282\],
+  .theme-spice .text-\[\#6d458b\] {
+    @apply text-[#44235d];
+  }
+
+  .theme-spice .bg-rose-50,
+  .theme-spice .bg-rose-100,
+  .theme-atreides .bg-rose-50,
+  .theme-atreides .bg-rose-100 {
+    background-color: rgb(254 226 226 / 1);
+  }
+
+  .theme-spice .text-rose-700,
+  .theme-spice .text-rose-900,
+  .theme-atreides .text-rose-700,
+  .theme-atreides .text-rose-900 {
+    color: rgb(127 29 29 / 1);
+  }
+
+  .theme-spice .border-rose-300,
+  .theme-spice .border-rose-400,
+  .theme-atreides .border-rose-300,
+  .theme-atreides .border-rose-400 {
+    border-color: rgb(244 63 94 / 0.75);
+  }
+
 }
 
 @layer base {

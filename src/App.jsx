@@ -45,7 +45,7 @@ function uid() {
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const SHARED_TODOS_CACHE_KEY = "dune_landsraad_shared_todos_cache_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "3.5.0";
+const APP_VERSION = "3.6.0";
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const RESET_WARNING_DISMISS_KEY = "dune_landsraad_reset_warning_dismissals_v1";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -65,6 +65,14 @@ const WEEKDAY_INDEX = {
 };
 
 const APP_CHANGE_NOTES = [
+  {
+    version: "3.6.0",
+    notes: [
+      "Improved reset alert readability across Light, Atreides, and Spice themes with higher-contrast warning surfaces and text.",
+      "Retuned warning checkbox colors so checked and unchecked states are clearly visible in every theme.",
+      "Adjusted warning timer alert palette so urgent red states stay legible without eye strain in lighter themes.",
+    ],
+  },
   {
     version: "3.5.0",
     notes: [
@@ -648,19 +656,36 @@ function completionSubtextClass(done, isDark) {
       : "text-[#7a6342]";
 }
 
-function checkboxClass(isDark, checked = false) {
-  if (!isDark) return "";
+function checkboxClass({ isDark, isAtreides = false, isSpice = false, checked = false }) {
+  if (isDark) {
+    return checked
+      ? "border-emerald-400 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-400 data-[state=checked]:text-emerald-950"
+      : "border-[#b7925f] bg-[#2b2218] data-[state=unchecked]:bg-[#2b2218] data-[state=unchecked]:border-[#b7925f]";
+  }
+
+  if (isAtreides) {
+    return checked
+      ? "border-emerald-500 data-[state=checked]:bg-emerald-300 data-[state=checked]:border-emerald-500 data-[state=checked]:text-emerald-950"
+      : "border-[#6b8d76] bg-[#2a4338] data-[state=unchecked]:bg-[#2a4338] data-[state=unchecked]:border-[#6b8d76]";
+  }
+
+  if (isSpice) {
+    return checked
+      ? "border-violet-500 data-[state=checked]:bg-violet-400 data-[state=checked]:border-violet-500 data-[state=checked]:text-violet-950"
+      : "border-[#8d64b1] bg-[#f1e1fa] data-[state=unchecked]:bg-[#f1e1fa] data-[state=unchecked]:border-[#8d64b1]";
+  }
+
   return checked
-    ? "border-emerald-400 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-400 data-[state=checked]:text-emerald-950"
-    : "border-[#b7925f] bg-[#2b2218] data-[state=unchecked]:bg-[#2b2218] data-[state=unchecked]:border-[#b7925f]";
+    ? "border-amber-500 data-[state=checked]:bg-amber-400 data-[state=checked]:border-amber-500 data-[state=checked]:text-amber-950"
+    : "border-[#b88f5a] bg-[#fff6e8] data-[state=unchecked]:bg-[#fff6e8] data-[state=unchecked]:border-[#b88f5a]";
 }
 
-function CheckboxControl({ checked, onChange, isDark }) {
+function CheckboxControl({ checked, onChange, isDark, isAtreides = false, isSpice = false }) {
   return (
     <Checkbox
       checked={checked}
       onCheckedChange={onChange}
-      className={checkboxClass(isDark, Boolean(checked))}
+      className={checkboxClass({ isDark, isAtreides, isSpice, checked: Boolean(checked) })}
     >
       <Check className={`h-3.5 w-3.5 ${isDark ? "text-[#0f0b07]" : ""}`} />
     </Checkbox>
@@ -3415,7 +3440,13 @@ export default function App() {
               <div
                 className={`w-full sm:w-auto rounded-xl border px-3 py-2 text-xs sm:min-w-[220px] ${
                   isResetWarningWindow
-                    ? "border-rose-500 bg-rose-900/30 text-rose-100 animate-pulse"
+                    ? isDark
+                      ? "border-rose-500 bg-rose-900/35 text-rose-100 animate-pulse"
+                      : isAtreides
+                        ? "border-rose-500 bg-rose-200 text-rose-950 animate-pulse"
+                        : isSpice
+                          ? "border-rose-500 bg-rose-200 text-rose-950 animate-pulse"
+                          : "border-rose-500 bg-rose-100 text-rose-950 animate-pulse"
                     : isDark
                       ? "border-[#4a3a25] bg-[#1b1510] text-[#e6d0ac]"
                       : isAtreides
@@ -3428,10 +3459,10 @@ export default function App() {
                 <div className="flex items-center gap-2 font-semibold">
                   <Clock3 className="h-3.5 w-3.5" /> Weekly Reset (Tue 12:00 AM EST)
                   {isResetWarningWindow ? (
-                    <Badge className="border border-rose-400/80 bg-rose-500/20 text-rose-100">Alert</Badge>
+                    <Badge className={`border ${isDark ? "border-rose-400/80 bg-rose-500/20 text-rose-100" : "border-rose-500 bg-rose-100 text-rose-900"}`}>Alert</Badge>
                   ) : null}
                 </div>
-                <div className={`${isResetWarningWindow ? "text-rose-100" : isDark ? "text-[#c8bca7]" : isAtreides ? "text-[#b9cfc0]" : isSpice ? "text-[#5f3e7a]" : "text-[#7a6342]"}`}>
+                <div className={`${isResetWarningWindow ? (isDark ? "text-rose-100" : "text-rose-950") : isDark ? "text-[#c8bca7]" : isAtreides ? "text-[#b9cfc0]" : isSpice ? "text-[#5f3e7a]" : "text-[#7a6342]"}`}>
                   {formatCountdown(weeklyResetCountdown)}
                 </div>
               </div>
@@ -3633,7 +3664,11 @@ export default function App() {
             className={`relative w-full max-w-lg rounded-2xl border p-4 sm:p-5 ${
               isDark
                 ? "bg-[#1a140f] border-rose-700/70 text-[#f2e7d5]"
-                : "bg-[#fff8ec] border-rose-400 text-[#3a2b17]"
+                : isAtreides
+                  ? "bg-[#edf6f1] border-rose-500 text-[#183127]"
+                  : isSpice
+                    ? "bg-[#f9efff] border-rose-500 text-[#3a1d53]"
+                    : "bg-[#fff8ec] border-rose-500 text-[#3a2b17]"
             }`}
           >
             <Button
@@ -3644,7 +3679,7 @@ export default function App() {
               className={`absolute right-3 top-3 h-7 w-7 ${
                 isDark
                   ? "border-rose-700/80 bg-rose-950/40 hover:bg-rose-900/60 text-rose-200"
-                  : "border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-700"
+                  : "border-rose-400 bg-rose-100 hover:bg-rose-200 text-rose-900"
               }`}
               aria-label="Close reset warning"
             >
@@ -3657,22 +3692,28 @@ export default function App() {
               <AlertTriangle className="h-5 w-5 text-rose-500" />
             </div>
 
-            <p className={`mt-3 text-sm leading-relaxed ${isDark ? "text-[#e9d2ce]" : "text-[#6b2b2b]"}`}>
+            <p className={`mt-3 text-sm leading-relaxed ${isDark ? "text-[#e9d2ce]" : isAtreides ? "text-[#5a1f24]" : isSpice ? "text-[#5f1f44]" : "text-[#5f1f1f]"}`}>
               There is less than 24 hours until the Deep Desert resets. Have you taken down your base and secured all important items?
             </p>
 
             <div
               className={`mt-4 rounded-lg border p-3 ${
-                isDark ? "border-rose-800/70 bg-rose-950/20" : "border-rose-200 bg-rose-50"
+                isDark
+                  ? "border-rose-800/70 bg-rose-950/20"
+                  : isAtreides
+                    ? "border-rose-300 bg-rose-100"
+                    : isSpice
+                      ? "border-rose-300 bg-rose-100"
+                      : "border-rose-300 bg-rose-100"
               }`}
             >
               <div className="flex items-start gap-3">
                 <Checkbox
                   checked={dismissResetWarningForWeek}
                   onCheckedChange={handleResetWarningWeekDismissalChange}
-                  className={checkboxClass(isDark, dismissResetWarningForWeek)}
+                  className={checkboxClass({ isDark, isAtreides, isSpice, checked: dismissResetWarningForWeek })}
                 />
-                <p className={`text-xs sm:text-sm ${isDark ? "text-[#f0d8d1]" : "text-[#6b2b2b]"}`}>
+                <p className={`text-xs sm:text-sm ${isDark ? "text-[#f0d8d1]" : isAtreides ? "text-[#5a1f24]" : isSpice ? "text-[#5f1f44]" : "text-[#5f1f1f]"}`}>
                   Do not display for the rest of the week
                 </p>
               </div>
