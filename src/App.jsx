@@ -248,8 +248,25 @@ function safeParse(json, fallback) {
   }
 }
 
+function stableStringify(value) {
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableStringify(item)).join(",")}]`;
+  }
+
+  const sortedKeys = Object.keys(value).sort();
+  const sortedEntries = sortedKeys.map(
+    (key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`
+  );
+
+  return `{${sortedEntries.join(",")}}`;
+}
+
 function areTodoListsEqual(left, right) {
-  return JSON.stringify(left || []) === JSON.stringify(right || []);
+  return stableStringify(left || []) === stableStringify(right || []);
 }
 
 function normalizeSharedTodos(inputTodos, nowIso = new Date().toISOString()) {
