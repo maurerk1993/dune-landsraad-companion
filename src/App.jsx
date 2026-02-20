@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,7 +45,7 @@ function uid() {
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const SHARED_TODOS_CACHE_KEY = "dune_landsraad_shared_todos_cache_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "3.6.0";
+const APP_VERSION = "3.6.1";
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const RESET_WARNING_DISMISS_KEY = "dune_landsraad_reset_warning_dismissals_v1";
 const NEW_YORK_TIME_ZONE = "America/New_York";
@@ -65,6 +65,14 @@ const WEEKDAY_INDEX = {
 };
 
 const APP_CHANGE_NOTES = [
+  {
+    version: "3.6.1",
+    notes: [
+      "Shared To-Do now auto-refreshes every 15 seconds so new tasks appear for everyone without a manual reload.",
+      "Added Shared To-Do sync status with a Last refreshed timestamp so teams can confirm when updates were pulled.",
+      "Fixed Atreides theme contrast on Dune Tools link rows so card backgrounds and text remain readable.",
+    ],
+  },
   {
     version: "3.6.0",
     notes: [
@@ -229,6 +237,10 @@ function safeParse(json, fallback) {
   } catch {
     return fallback;
   }
+}
+
+function areTodoListsEqual(left, right) {
+  return JSON.stringify(left || []) === JSON.stringify(right || []);
 }
 
 const DEFAULT_HOUSE_MAPS = {
@@ -2447,7 +2459,7 @@ function HouseSwatchesCard({ swatches, setSwatches, isDark }) {
 }
 
 
-function DuneToolsCard({ isDark, isAdmin, tools, setTools }) {
+function DuneToolsCard({ isDark, isAtreides, isSpice, isAdmin, tools, setTools }) {
   const [nameInput, setNameInput] = useState("");
   const [urlInput, setUrlInput] = useState("");
   const [notesInput, setNotesInput] = useState("");
@@ -2470,7 +2482,15 @@ function DuneToolsCard({ isDark, isAdmin, tools, setTools }) {
   };
 
   return (
-    <Card className={`rounded-2xl border ${isDark ? "bg-[#17120d] border-[#4a3a25]" : "bg-[#fff9ef] border-[#d8bc91]"}`}>
+    <Card className={`rounded-2xl border ${
+      isDark
+        ? "bg-[#17120d] border-[#4a3a25]"
+        : isAtreides
+          ? "bg-[#1f3428] border-[#5f836b]"
+          : isSpice
+            ? "bg-[#f3dcff] border-[#9c74bb]"
+            : "bg-[#fff9ef] border-[#d8bc91]"
+    }`}>
       <CardHeader>
         <SectionHeader
           icon={Wrench}
@@ -2482,21 +2502,29 @@ function DuneToolsCard({ isDark, isAdmin, tools, setTools }) {
       <CardContent className="space-y-4">
         <div className="space-y-3">
           {tools.map((tool) => (
-            <div key={tool.id} className={`rounded-xl border p-3 ${isDark ? "border-[#3f3124] bg-[#1b1510]" : "border-[#d8bc91] bg-[#fff7e8]"}`}>
+            <div key={tool.id} className={`rounded-xl border p-3 ${
+              isDark
+                ? "border-[#3f3124] bg-[#1b1510]"
+                : isAtreides
+                  ? "border-[#62866e] bg-[#2a4436]"
+                  : isSpice
+                    ? "border-[#a47cc4] bg-[#ebd0f8]"
+                    : "border-[#d8bc91] bg-[#fff7e8]"
+            }`}>
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="font-semibold text-sm">{tool.name}</p>
-                  <a href={tool.url} target="_blank" rel="noreferrer" className={`mt-1 inline-flex items-center gap-1 text-xs underline ${isDark ? "text-[#d9c6a6]" : "text-[#7a4e1e]"}`}>
+                  <p className={`font-semibold text-sm ${isDark ? "text-[#f3e2c8]" : isAtreides ? "text-[#e3f3e8]" : isSpice ? "text-[#49255f]" : "text-[#3a2b17]"}`}>{tool.name}</p>
+                  <a href={tool.url} target="_blank" rel="noreferrer" className={`mt-1 inline-flex items-center gap-1 text-xs underline ${isDark ? "text-[#d9c6a6]" : isAtreides ? "text-[#c8e8d1]" : isSpice ? "text-[#5f357a]" : "text-[#7a4e1e]"}`}>
                     Open link <ExternalLink className="h-3 w-3" />
                   </a>
                 </div>
                 {isAdmin && showAdminControls ? (
-                  <Button variant="ghost" size="icon" onClick={() => removeTool(tool.id)} className={isDark ? "text-[#ccb089] hover:bg-[#2a2118]" : "text-[#7d5c31] hover:bg-[#efe1c8]"}>
+                  <Button variant="ghost" size="icon" onClick={() => removeTool(tool.id)} className={isDark ? "text-[#ccb089] hover:bg-[#2a2118]" : isAtreides ? "text-[#d8ebdf] hover:bg-[#355345]" : isSpice ? "text-[#4e2b67] hover:bg-[#d8bae9]" : "text-[#7d5c31] hover:bg-[#efe1c8]"}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 ) : null}
               </div>
-              {tool.notes ? <p className={`mt-2 text-xs ${isDark ? "text-[#b9a383]" : "text-[#6b5636]"}`}>{tool.notes}</p> : null}
+              {tool.notes ? <p className={`mt-2 text-xs ${isDark ? "text-[#b9a383]" : isAtreides ? "text-[#c8dbcf]" : isSpice ? "text-[#5f3b79]" : "text-[#6b5636]"}`}>{tool.notes}</p> : null}
             </div>
           ))}
         </div>
@@ -2508,30 +2536,32 @@ function DuneToolsCard({ isDark, isAdmin, tools, setTools }) {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowAdminControls((prev) => !prev)}
-                className={
-                  isDark
-                    ? "border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#e6d0ac]"
-                    : "border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"
-                }
+                className={isDark
+                  ? "border-[#5a462c] bg-[#211910] hover:bg-[#2a2118] text-[#e6d0ac]"
+                  : isAtreides
+                    ? "border-[#6b8d76] bg-[#294336] hover:bg-[#355345] text-[#d8ebdf]"
+                    : isSpice
+                      ? "border-[#8f69b1] bg-[#d7b5ea] hover:bg-[#c9a0e0] text-[#3f2459]"
+                      : "border-[#c9a878] bg-[#f7ead2] hover:bg-[#efdfc2] text-[#6d4f27]"}
               >
                 {showAdminControls ? "Hide Admin Controls" : "Show Admin Controls"}
               </Button>
             </div>
             {showAdminControls ? (
-              <div className={`rounded-xl border p-3 space-y-2 ${isDark ? "border-[#4a3a25] bg-[#211910]" : "border-[#d8bc91] bg-[#fff3df]"}`}>
-                <p className={`text-xs ${isDark ? "text-[#c8bca7]" : "text-[#7a6342]"}`}>
+              <div className={`rounded-xl border p-3 space-y-2 ${isDark ? "border-[#4a3a25] bg-[#211910]" : isAtreides ? "border-[#62866e] bg-[#2a4436]" : isSpice ? "border-[#a47cc4] bg-[#ebd0f8]" : "border-[#d8bc91] bg-[#fff3df]"}`}>
+                <p className={`text-xs ${isDark ? "text-[#c8bca7]" : isAtreides ? "text-[#d2e4d9]" : isSpice ? "text-[#5f3b79]" : "text-[#7a6342]"}`}>
                   Admin mode: Add, remove, and annotate tools for everyone.
                 </p>
-                <Input value={nameInput} onChange={(e) => setNameInput(e.target.value)} placeholder="Tool name" className={isDark ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]" : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"} />
-                <Input value={urlInput} onChange={(e) => setUrlInput(e.target.value)} placeholder="https://..." className={isDark ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]" : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"} />
+                <Input value={nameInput} onChange={(e) => setNameInput(e.target.value)} placeholder="Tool name" className={isDark ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]" : isAtreides ? "bg-[#21372b] border-[#62866e] text-[#e8f5ec]" : isSpice ? "bg-[#f8ecff] border-[#a47cc4] text-[#3f2459]" : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"} />
+                <Input value={urlInput} onChange={(e) => setUrlInput(e.target.value)} placeholder="https://..." className={isDark ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]" : isAtreides ? "bg-[#21372b] border-[#62866e] text-[#e8f5ec]" : isSpice ? "bg-[#f8ecff] border-[#a47cc4] text-[#3f2459]" : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"} />
                 <textarea
                   value={notesInput}
                   onChange={(e) => setNotesInput(e.target.value)}
                   rows={2}
                   placeholder="Quick notes"
-                  className={`w-full rounded-md border px-3 py-2 text-sm ${isDark ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]" : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"}`}
+                  className={`w-full rounded-md border px-3 py-2 text-sm ${isDark ? "bg-[#201911] border-[#4a3a25] text-[#f2e8d7]" : isAtreides ? "bg-[#21372b] border-[#62866e] text-[#e8f5ec]" : isSpice ? "bg-[#f8ecff] border-[#a47cc4] text-[#3f2459]" : "bg-[#fffdf7] border-[#d8bc91] text-[#3a2b17]"}`}
                 />
-                <Button onClick={addTool} className={isDark ? "gap-2 bg-[#c48a3a] hover:bg-[#d59a48] text-[#1a1208]" : "gap-2 bg-[#a56b2c] hover:bg-[#8d5821] text-[#fff4de]"}>
+                <Button onClick={addTool} className={isDark ? "gap-2 bg-[#c48a3a] hover:bg-[#d59a48] text-[#1a1208]" : isAtreides ? "gap-2 bg-[#5f8d73] hover:bg-[#6ea182] text-[#103020]" : isSpice ? "gap-2 bg-[#b485d3] hover:bg-[#a574c6] text-[#2f1845]" : "gap-2 bg-[#a56b2c] hover:bg-[#8d5821] text-[#fff4de]"}>
                   <Plus className="h-4 w-4" /> Add Tool
                 </Button>
               </div>
@@ -2707,6 +2737,11 @@ export default function App() {
 
   const [themeMode, setThemeMode] = useState(defaults.themeMode);
   const [sessionTodos, setSessionTodos] = useState(defaults.sessionTodos);
+  const sharedTodosHasUnsavedLocalChangesRef = useRef(false);
+  const setSessionTodosFromLocalEdit = useCallback((valueOrUpdater) => {
+    sharedTodosHasUnsavedLocalChangesRef.current = true;
+    setSessionTodos(valueOrUpdater);
+  }, []);
   const [materials, setMaterials] = useState(defaults.materials);
   const [farmItems, setFarmItems] = useState(defaults.farmItems);
   const [farmSources, setFarmSources] = useState(defaults.farmSources);
@@ -2720,6 +2755,8 @@ export default function App() {
   const [lastCloudError, setLastCloudError] = useState(null);
   const [sharedTodosReady, setSharedTodosReady] = useState(false);
   const [lastSharedTodosError, setLastSharedTodosError] = useState(null);
+  const [lastSharedTodosRefreshAt, setLastSharedTodosRefreshAt] = useState(null);
+  const [sharedTodosRefreshing, setSharedTodosRefreshing] = useState(false);
   const [showChangeNotes, setShowChangeNotes] = useState(false);
   const [showLocationPopup, setShowLocationPopup] = useState(false);
   const [selectedLocationHouse, setSelectedLocationHouse] = useState(ALL_LANDSRAAD_HOUSES[0]);
@@ -2873,9 +2910,14 @@ export default function App() {
     if (!session?.user?.id || !hydrated) return;
 
     let cancelled = false;
+    let refreshTimerId;
 
-    (async () => {
+    const fetchSharedTodos = async ({ isAutoRefresh = false } = {}) => {
       try {
+        if (isAutoRefresh && !cancelled) {
+          setSharedTodosRefreshing(true);
+        }
+
         const { data, error } = await supabase
           .from("shared_todos")
           .select("todos")
@@ -2886,12 +2928,17 @@ export default function App() {
         if (cancelled) return;
 
         if (Array.isArray(data?.todos)) {
-          setSessionTodos(data.todos);
+          if (isAutoRefresh && sharedTodosHasUnsavedLocalChangesRef.current) {
+            setLastSharedTodosRefreshAt(new Date().toISOString());
+            return;
+          }
+
+          setSessionTodos((prev) => (areTodoListsEqual(prev, data.todos) ? prev : data.todos));
         } else {
           await supabase.from("shared_todos").upsert(
             {
               key: "global",
-              todos: sessionTodos,
+              todos: defaults.sessionTodos,
               updated_at: new Date().toISOString(),
             },
             { onConflict: "key" }
@@ -2900,15 +2947,26 @@ export default function App() {
 
         setSharedTodosReady(true);
         setLastSharedTodosError(null);
+        setLastSharedTodosRefreshAt(new Date().toISOString());
       } catch (e) {
         console.error("Shared to-do sync failed:", e?.message || e);
         setSharedTodosReady(true);
         setLastSharedTodosError(e?.message || "Shared to-do sync failed");
+      } finally {
+        if (isAutoRefresh && !cancelled) {
+          setSharedTodosRefreshing(false);
+        }
       }
-    })();
+    };
+
+    fetchSharedTodos();
+    refreshTimerId = setInterval(() => {
+      fetchSharedTodos({ isAutoRefresh: true });
+    }, 15000);
 
     return () => {
       cancelled = true;
+      if (refreshTimerId) clearInterval(refreshTimerId);
     };
   }, [session?.user?.id, hydrated]);
 
@@ -3115,6 +3173,7 @@ export default function App() {
           },
           { onConflict: "key" }
         );
+        sharedTodosHasUnsavedLocalChangesRef.current = false;
         setLastSharedTodosError(null);
       } catch (e) {
         console.error("Shared to-do save failed:", e?.message || e);
@@ -3512,7 +3571,7 @@ export default function App() {
               description="Shared checklist synced for all users of this site."
               icon={ListTodo}
               items={sessionTodos}
-              setItems={setSessionTodos}
+              setItems={setSessionTodosFromLocalEdit}
               placeholder="e.g., Run Testing Labs in Deep Desert"
               isDark={isDark}
             />
@@ -3521,6 +3580,13 @@ export default function App() {
                 Shared To-Do sync warning: {lastSharedTodosError}
               </p>
             ) : null}
+            <p className={`mt-2 text-xs ${isDark ? "text-[#b19d80]" : isAtreides ? "text-[#c0d5c7]" : isSpice ? "text-[#6b4589]" : "text-[#7a6342]"}`}>
+              {sharedTodosRefreshing
+                ? "Refreshing shared tasks..."
+                : lastSharedTodosRefreshAt
+                  ? `Last refreshed: ${new Date(lastSharedTodosRefreshAt).toLocaleTimeString()}`
+                  : "Last refreshed: awaiting first sync..."}
+            </p>
           </TabsContent>
 
           <TabsContent value="materials">
@@ -3562,7 +3628,7 @@ export default function App() {
           </TabsContent>
 
           <TabsContent value="dune-tools">
-            <DuneToolsCard isDark={isDark} isAdmin={isAdmin} tools={duneTools} setTools={setDuneTools} />
+            <DuneToolsCard isDark={isDark} isAtreides={isAtreides} isSpice={isSpice} isAdmin={isAdmin} tools={duneTools} setTools={setDuneTools} />
           </TabsContent>
 
         </Tabs>
