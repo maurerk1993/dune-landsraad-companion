@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -2737,6 +2737,11 @@ export default function App() {
 
   const [themeMode, setThemeMode] = useState(defaults.themeMode);
   const [sessionTodos, setSessionTodos] = useState(defaults.sessionTodos);
+  const sharedTodosHasUnsavedLocalChangesRef = useRef(false);
+  const setSessionTodosFromLocalEdit = useCallback((valueOrUpdater) => {
+    sharedTodosHasUnsavedLocalChangesRef.current = true;
+    setSessionTodos(valueOrUpdater);
+  }, []);
   const [materials, setMaterials] = useState(defaults.materials);
   const [farmItems, setFarmItems] = useState(defaults.farmItems);
   const [farmSources, setFarmSources] = useState(defaults.farmSources);
@@ -2923,6 +2928,11 @@ export default function App() {
         if (cancelled) return;
 
         if (Array.isArray(data?.todos)) {
+          if (isAutoRefresh && sharedTodosHasUnsavedLocalChangesRef.current) {
+            setLastSharedTodosRefreshAt(new Date().toISOString());
+            return;
+          }
+
           setSessionTodos((prev) => (areTodoListsEqual(prev, data.todos) ? prev : data.todos));
         } else {
           await supabase.from("shared_todos").upsert(
@@ -3163,6 +3173,7 @@ export default function App() {
           },
           { onConflict: "key" }
         );
+        sharedTodosHasUnsavedLocalChangesRef.current = false;
         setLastSharedTodosError(null);
       } catch (e) {
         console.error("Shared to-do save failed:", e?.message || e);
@@ -3560,7 +3571,7 @@ export default function App() {
               description="Shared checklist synced for all users of this site."
               icon={ListTodo}
               items={sessionTodos}
-              setItems={setSessionTodos}
+              setItems={setSessionTodosFromLocalEdit}
               placeholder="e.g., Run Testing Labs in Deep Desert"
               isDark={isDark}
             />
