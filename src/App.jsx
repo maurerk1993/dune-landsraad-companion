@@ -3609,6 +3609,21 @@ export default function App() {
                 Signed in as <span className="font-semibold">{session.user.email}</span>
               </div>
 
+              {lastCloudError ? (
+                <div
+                  className={`w-full sm:w-auto rounded-xl border px-3 py-2 text-xs sm:max-w-[320px] ${
+                    isDark
+                      ? "border-rose-500/70 bg-rose-900/40 text-rose-100"
+                      : "border-rose-500 bg-rose-100 text-rose-950"
+                  }`}
+                  role="alert"
+                  aria-live="polite"
+                >
+                  <div className="font-semibold">Cloud sync issue</div>
+                  <div className="mt-1 opacity-90 break-words">{lastCloudError}</div>
+                </div>
+              ) : null}
+
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
