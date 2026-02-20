@@ -45,7 +45,7 @@ function uid() {
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const SHARED_TODOS_CACHE_KEY = "dune_landsraad_shared_todos_cache_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "3.7.1";
+const APP_VERSION = "3.7.2";
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const COMPLETED_SHARED_TODO_RETENTION_MS = DAY_IN_MS;
 const RESET_WARNING_DISMISS_KEY = "dune_landsraad_reset_warning_dismissals_v1";
@@ -66,6 +66,13 @@ const WEEKDAY_INDEX = {
 };
 
 const APP_CHANGE_NOTES = [
+  {
+    version: "3.7.2",
+    notes: [
+      "Removed the cloud sync status text from the top-right header so players no longer see Cloud sync active messaging.",
+      "Removed the Last cloud save timestamp from the header while keeping cloud save behavior unchanged in the background.",
+    ],
+  },
   {
     version: "3.7.1",
     notes: [
@@ -3602,6 +3609,21 @@ export default function App() {
                 Signed in as <span className="font-semibold">{session.user.email}</span>
               </div>
 
+              {lastCloudError ? (
+                <div
+                  className={`w-full sm:w-auto rounded-xl border px-3 py-2 text-xs sm:max-w-[320px] ${
+                    isDark
+                      ? "border-rose-500/70 bg-rose-900/40 text-rose-100"
+                      : "border-rose-500 bg-rose-100 text-rose-950"
+                  }`}
+                  role="alert"
+                  aria-live="polite"
+                >
+                  <div className="font-semibold">Cloud sync issue</div>
+                  <div className="mt-1 opacity-90 break-words">{lastCloudError}</div>
+                </div>
+              ) : null}
+
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
@@ -3636,21 +3658,6 @@ export default function App() {
                   <LogOut className="h-4 w-4 mr-2" />
                   Sign Out
                 </Button>
-              </div>
-
-              <div className={`text-xs ${isDark ? "text-[#a79274]" : isAtreides ? "text-[#b6cabc]" : isSpice ? "text-[#654282]" : "text-[#7a6342]"}`}>
-                {!cloudReady
-                  ? "Initializing cloud sync..."
-                  : cloudSaving
-                    ? "Saving to cloud..."
-                    : "Cloud sync active"}
-              </div>
-              <div className={`text-[11px] ${isDark ? "text-[#947d5e]" : isAtreides ? "text-[#a8bfb0]" : isSpice ? "text-[#6d458b]" : "text-[#846742]"}`}>
-                {lastCloudError
-                  ? `Sync issue: ${lastCloudError}`
-                  : lastCloudSaveAt
-                    ? `Last cloud save: ${new Date(lastCloudSaveAt).toLocaleTimeString()}`
-                    : "Awaiting first cloud save..."}
               </div>
 
               <div
