@@ -45,8 +45,9 @@ function uid() {
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const SHARED_TODOS_CACHE_KEY = "dune_landsraad_shared_todos_cache_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "3.6.1";
+const APP_VERSION = "3.7.0";
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
+const COMPLETED_SHARED_TODO_RETENTION_MS = DAY_IN_MS;
 const RESET_WARNING_DISMISS_KEY = "dune_landsraad_reset_warning_dismissals_v1";
 const NEW_YORK_TIME_ZONE = "America/New_York";
 const ADMIN_EMAIL = "maurerk1993@gmail.com";
@@ -65,6 +66,14 @@ const WEEKDAY_INDEX = {
 };
 
 const APP_CHANGE_NOTES = [
+  {
+    version: "3.7.0",
+    notes: [
+      "Shared To-Do rows are now more compact so more tasks fit on screen at once.",
+      "Completed Shared To-Do tasks now automatically move to the bottom, keeping active tasks at the top.",
+      "Completed Shared To-Do tasks are now removed after 24 hours and sync instantly across users via realtime updates.",
+    ],
+  },
   {
     version: "3.6.1",
     notes: [
@@ -239,8 +248,77 @@ function safeParse(json, fallback) {
   }
 }
 
+function stableStringify(value) {
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableStringify(item)).join(",")}]`;
+  }
+
+  const sortedKeys = Object.keys(value).sort();
+  const sortedEntries = sortedKeys.map(
+    (key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`
+  );
+
+  return `{${sortedEntries.join(",")}}`;
+}
+
 function areTodoListsEqual(left, right) {
-  return JSON.stringify(left || []) === JSON.stringify(right || []);
+  return stableStringify(left || []) === stableStringify(right || []);
+}
+
+function normalizeSharedTodos(inputTodos, nowIso = new Date().toISOString()) {
+  if (!Array.isArray(inputTodos)) return [];
+
+  const nowMs = Date.parse(nowIso);
+  const withMeta = inputTodos
+    .map((item, index) => {
+      if (!item || typeof item !== "object") return null;
+
+      const text = String(item.text || "").trim();
+      if (!text) return null;
+
+      const done = Boolean(item.done);
+      const parsedCompletedAt = item.completedAt ? Date.parse(item.completedAt) : NaN;
+      const completedAt = done
+        ? Number.isFinite(parsedCompletedAt)
+          ? new Date(parsedCompletedAt).toISOString()
+          : nowIso
+        : null;
+
+      if (
+        done &&
+        completedAt &&
+        Number.isFinite(nowMs) &&
+        Number.isFinite(Date.parse(completedAt)) &&
+        nowMs - Date.parse(completedAt) >= COMPLETED_SHARED_TODO_RETENTION_MS
+      ) {
+        return null;
+      }
+
+      return {
+        id: item.id || uid(),
+        text,
+        done,
+        completedAt,
+        _index: index,
+      };
+    })
+    .filter(Boolean);
+
+  return withMeta
+    .sort((a, b) => {
+      if (a.done !== b.done) return a.done ? 1 : -1;
+      return a._index - b._index;
+    })
+    .map((todo) => ({
+      id: todo.id,
+      text: todo.text,
+      done: todo.done,
+      completedAt: todo.completedAt,
+    }));
 }
 
 const DEFAULT_HOUSE_MAPS = {
@@ -762,6 +840,7 @@ function TodoListCard({
   setItems,
   placeholder = "Add a task...",
   isDark,
+  compactRows = false,
 }) {
   const [text, setText] = useState("");
   const [editingId, setEditingId] = useState(null);
@@ -772,12 +851,22 @@ function TodoListCard({
   const add = () => {
     const value = text.trim();
     if (!value) return;
-    setItems([{ id: uid(), text: value, done: false }, ...items]);
+    setItems([{ id: uid(), text: value, done: false, completedAt: null }, ...items]);
     setText("");
   };
 
   const toggle = (id) =>
-    setItems(items.map((i) => (i.id === id ? { ...i, done: !i.done } : i)));
+    setItems(
+      items.map((i) => {
+        if (i.id !== id) return i;
+        const nextDone = !i.done;
+        return {
+          ...i,
+          done: nextDone,
+          completedAt: nextDone ? new Date().toISOString() : null,
+        };
+      })
+    );
   const remove = (id) => setItems(items.filter((i) => i.id !== id));
 
   const startEdit = (item) => {
@@ -862,12 +951,14 @@ function TodoListCard({
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
-                  className={`flex items-center justify-between rounded-xl border p-3 ${completionRowClass(
+                  className={`flex items-center justify-between rounded-xl border ${
+                    compactRows ? "p-2" : "p-3"
+                  } ${completionRowClass(
                     item.done,
                     isDark
                   )}`}
                 >
-                  <div className="flex flex-1 items-center gap-3 min-w-0">
+                  <div className={`flex flex-1 items-center min-w-0 ${compactRows ? "gap-2" : "gap-3"}`}>
                     <CheckboxControl
                       checked={item.done}
                       onChange={() => toggle(item.id)}
@@ -902,7 +993,7 @@ function TodoListCard({
                         />
                       ) : (
                         <p
-                          className={`text-sm truncate ${
+                          className={`${compactRows ? "text-xs" : "text-sm"} truncate ${
                             item.done ? "line-through" : ""
                           } ${completionTextClass(item.done, isDark)}`}
                         >
@@ -921,7 +1012,7 @@ function TodoListCard({
                           className={isDark ? "text-emerald-300 hover:bg-[#2a2118]" : "text-emerald-700 hover:bg-[#efe1c8]"}
                           title="Save"
                         >
-                          <Check className="h-4 w-4" />
+                          <Check className={compactRows ? "h-3.5 w-3.5" : "h-4 w-4"} />
                         </Button>
                         <Button
                           variant="ghost"
@@ -933,7 +1024,7 @@ function TodoListCard({
                           className={isDark ? "text-[#ccb089] hover:bg-[#2a2118]" : "text-[#7d5c31] hover:bg-[#efe1c8]"}
                           title="Cancel"
                         >
-                          <X className="h-4 w-4" />
+                          <X className={compactRows ? "h-3.5 w-3.5" : "h-4 w-4"} />
                         </Button>
                       </>
                     ) : (
@@ -944,7 +1035,7 @@ function TodoListCard({
                         className={isDark ? "text-[#ccb089] hover:bg-[#2a2118]" : "text-[#7d5c31] hover:bg-[#efe1c8]"}
                         title="Edit"
                       >
-                        <Pencil className="h-4 w-4" />
+                        <Pencil className={compactRows ? "h-3.5 w-3.5" : "h-4 w-4"} />
                       </Button>
                     )}
                     <Button
@@ -957,7 +1048,7 @@ function TodoListCard({
                           : "text-[#7d5c31] hover:bg-[#efe1c8]"
                       }`}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className={compactRows ? "h-3.5 w-3.5" : "h-4 w-4"} />
                     </Button>
                   </div>
                 </motion.div>
@@ -2736,11 +2827,15 @@ export default function App() {
   const [cloudSaving, setCloudSaving] = useState(false);
 
   const [themeMode, setThemeMode] = useState(defaults.themeMode);
-  const [sessionTodos, setSessionTodos] = useState(defaults.sessionTodos);
+  const [sessionTodos, setSessionTodos] = useState(normalizeSharedTodos(defaults.sessionTodos));
   const sharedTodosHasUnsavedLocalChangesRef = useRef(false);
   const setSessionTodosFromLocalEdit = useCallback((valueOrUpdater) => {
     sharedTodosHasUnsavedLocalChangesRef.current = true;
-    setSessionTodos(valueOrUpdater);
+    setSessionTodos((prev) => {
+      const nextTodos =
+        typeof valueOrUpdater === "function" ? valueOrUpdater(prev) : valueOrUpdater;
+      return normalizeSharedTodos(nextTodos);
+    });
   }, []);
   const [materials, setMaterials] = useState(defaults.materials);
   const [farmItems, setFarmItems] = useState(defaults.farmItems);
@@ -2818,7 +2913,7 @@ export default function App() {
       } else if (typeof saved.isDark === "boolean") {
         setThemeMode(saved.isDark ? "dark" : "light");
       }
-      if (Array.isArray(saved.sessionTodos)) setSessionTodos(saved.sessionTodos);
+      if (Array.isArray(saved.sessionTodos)) setSessionTodos(normalizeSharedTodos(saved.sessionTodos));
       if (Array.isArray(saved.materials)) setMaterials(saved.materials);
       if (Array.isArray(saved.farmItems)) setFarmItems(saved.farmItems);
       if (Array.isArray(saved.farmSources)) setFarmSources(normalizeFarmSources(saved.farmSources));
@@ -2832,7 +2927,7 @@ export default function App() {
     }
 
     if (Array.isArray(sharedTodosCache)) {
-      setSessionTodos(sharedTodosCache);
+      setSessionTodos(normalizeSharedTodos(sharedTodosCache));
     }
 
     setHydrated(true);
@@ -2933,12 +3028,26 @@ export default function App() {
             return;
           }
 
-          setSessionTodos((prev) => (areTodoListsEqual(prev, data.todos) ? prev : data.todos));
+          const normalizedTodos = normalizeSharedTodos(data.todos);
+          setSessionTodos((prev) =>
+            areTodoListsEqual(prev, normalizedTodos) ? prev : normalizedTodos
+          );
+
+          if (!areTodoListsEqual(data.todos, normalizedTodos)) {
+            await supabase.from("shared_todos").upsert(
+              {
+                key: "global",
+                todos: normalizedTodos,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "key" }
+            );
+          }
         } else {
           await supabase.from("shared_todos").upsert(
             {
               key: "global",
-              todos: defaults.sessionTodos,
+              todos: normalizeSharedTodos(defaults.sessionTodos),
               updated_at: new Date().toISOString(),
             },
             { onConflict: "key" }
@@ -2959,6 +3068,22 @@ export default function App() {
       }
     };
 
+    const realtimeChannel = supabase
+      .channel("shared_todos_global_sync")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "shared_todos",
+          filter: "key=eq.global",
+        },
+        () => {
+          fetchSharedTodos({ isAutoRefresh: true });
+        }
+      )
+      .subscribe();
+
     fetchSharedTodos();
     refreshTimerId = setInterval(() => {
       fetchSharedTodos({ isAutoRefresh: true });
@@ -2967,6 +3092,7 @@ export default function App() {
     return () => {
       cancelled = true;
       if (refreshTimerId) clearInterval(refreshTimerId);
+      supabase.removeChannel(realtimeChannel);
     };
   }, [session?.user?.id, hydrated]);
 
@@ -3168,7 +3294,7 @@ export default function App() {
         await supabase.from("shared_todos").upsert(
           {
             key: "global",
-            todos: sessionTodos,
+            todos: normalizeSharedTodos(sessionTodos),
             updated_at: new Date().toISOString(),
           },
           { onConflict: "key" }
@@ -3574,6 +3700,7 @@ export default function App() {
               setItems={setSessionTodosFromLocalEdit}
               placeholder="e.g., Run Testing Labs in Deep Desert"
               isDark={isDark}
+              compactRows
             />
             {lastSharedTodosError ? (
               <p className={`mt-2 text-xs ${isDark ? "text-amber-300" : "text-amber-700"}`}>
