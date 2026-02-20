@@ -45,7 +45,7 @@ function uid() {
 const STORAGE_KEY = "dune_landsraad_companion_v1";
 const SHARED_TODOS_CACHE_KEY = "dune_landsraad_shared_todos_cache_v1";
 const BACKUP_FILENAME_PREFIX = "dune-landsraad-backup";
-const APP_VERSION = "3.7.0";
+const APP_VERSION = "3.7.1";
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const COMPLETED_SHARED_TODO_RETENTION_MS = DAY_IN_MS;
 const RESET_WARNING_DISMISS_KEY = "dune_landsraad_reset_warning_dismissals_v1";
@@ -66,6 +66,13 @@ const WEEKDAY_INDEX = {
 };
 
 const APP_CHANGE_NOTES = [
+  {
+    version: "3.7.1",
+    notes: [
+      "Landsraad Goal Description and Goal Value fields now support pressing Enter to add the goal without clicking Add.",
+      "Added validation messaging in Landsraad so Goal Description and Goal Value cannot be left blank when adding a tracker.",
+    ],
+  },
   {
     version: "3.7.0",
     notes: [
@@ -1609,8 +1616,24 @@ function LandsraadCard({
 
   const addGoal = () => {
     const rn = rewardName.trim();
-    const req = Number(requiredAmount);
-    if (!targetHouseId || !rn || !Number.isFinite(req) || req <= 0) return;
+    const reqText = requiredAmount.trim();
+    const req = Number(reqText);
+
+    if (!rn || !reqText) {
+      window.alert("Goal Description and Goal Value are required.");
+      return;
+    }
+
+    if (!targetHouseId) {
+      window.alert("Please select a house before adding a goal tracker.");
+      return;
+    }
+
+    if (!Number.isFinite(req) || req <= 0) {
+      window.alert("Goal Value must be a number greater than 0.");
+      return;
+    }
+
     setHouses(
       houses.map((h) =>
         h.id === targetHouseId
@@ -1620,6 +1643,12 @@ function LandsraadCard({
     );
     setRewardName("");
     setRequiredAmount("");
+  };
+
+  const handleGoalInputEnter = (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    addGoal();
   };
 
 
@@ -1779,6 +1808,7 @@ function LandsraadCard({
               <Input
                 value={rewardName}
                 onChange={(e) => setRewardName(e.target.value)}
+                onKeyDown={handleGoalInputEnter}
                 placeholder="e.g., Weekly Cache Turn-In"
                 className={
                   isDark
@@ -1797,6 +1827,7 @@ function LandsraadCard({
                 min={1}
                 value={requiredAmount}
                 onChange={(e) => setRequiredAmount(e.target.value)}
+                onKeyDown={handleGoalInputEnter}
                 placeholder="5000"
                 className={
                   isDark
